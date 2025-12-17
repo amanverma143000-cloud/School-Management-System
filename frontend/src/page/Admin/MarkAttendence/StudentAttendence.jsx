@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";// eslint-disable-line
+import { useGetStudentsQuery } from "../../../../Api/SchoolApi";
 
 export default function StudentAttendance({ goBack }) {
-  const studentsData = {
-    "Class 10A": [
-      { id: 1, name: "Aman Verma" },
-      { id: 2, name: "Ravi Kumar" },
-      { id: 3, name: "Sneha Sharma" },
-    ],
-    "Class 10B": [
-      { id: 4, name: "Rahul Singh" },
-      { id: 5, name: "Neha Gupta" },
-      { id: 6, name: "Vikas Yadav" },
-    ],
-    "Class 12A": [
-      { id: 7, name: "Sanya Jain" },
-      { id: 8, name: "Harshit Mehta" },
-      { id: 9, name: "Kiran Patel" },
-    ],
-  };
+  const { data: allStudents = [], isLoading } = useGetStudentsQuery();
+  
+  // Group students by class and section
+  const studentsData = allStudents.reduce((acc, student) => {
+    const classKey = `${student.class} - ${student.section}`;
+    if (!acc[classKey]) acc[classKey] = [];
+    acc[classKey].push({
+      id: student._id,
+      name: `${student.name} ${student.lastname}`,
+      rollNumber: student.rollNumber
+    });
+    return acc;
+  }, {});
 
   const [selectedClass, setSelectedClass] = useState("");
   const [attendance, setAttendance] = useState({});
@@ -82,6 +79,14 @@ export default function StudentAttendance({ goBack }) {
   const allMarked =
     selectedStudents.length > 0 &&
     selectedStudents.every((s) => attendance[s.id]);
+    
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading students...</div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -186,7 +191,12 @@ export default function StudentAttendance({ goBack }) {
                   whileHover={{ scale: 1.01 }}
                   className="border-b hover:bg-gray-50"
                 >
-                  <td className="p-3">{student.name}</td>
+                  <td className="p-3">
+                    <div>
+                      <div className="font-medium">{student.name}</div>
+                      <div className="text-sm text-gray-500">Roll: {student.rollNumber}</div>
+                    </div>
+                  </td>
                   <td className="p-3 text-center space-x-3">
                     {["Present", "Absent", "Leave"].map((status) => {
                       const isActive = attendance[student.id] === status;

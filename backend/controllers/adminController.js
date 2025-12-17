@@ -97,3 +97,23 @@ export const studentOnly = (req, res) => {
 export const teacherOnly = (req, res) => {
   res.json({ message: `Welcome Teacher ${req.user.name}` });
 }
+
+// Get all admins
+export const getAllAdmins = async (req, res) => {
+  try {
+    const admins = await Admin.find({}).select('-password');
+    res.status(200).json(admins);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Create new admin
+export const createAdmin = async (req, res) => {
+  try {
+    const admin = await Admin.create(req.body);
+    res.status(201).json({ success: true, admin });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

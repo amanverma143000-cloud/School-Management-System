@@ -96,22 +96,43 @@ const ManageStudents = () => {
       s.class?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (isLoading) return <p className="p-6 text-gray-600">⏳ Loading students...</p>;
-  if (isError) return <p className="p-6 text-red-600">❌ Error loading students.</p>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-xl text-gray-600">⏳ Loading students...</div>
+    </div>
+  );
+  
+  if (isError) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-xl text-red-600">
+        ❌ Error loading students. Please check your login status.
+        <button 
+          onClick={() => window.location.reload()} 
+          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-8 bg-gradient-to-br min-h-screen">
-      <h2 className="text-3xl font-bold mb-6 text-[var(--text-secondary)]">
-        🎓 Manage Students
-      </h2>
+    <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800">
+          🎓 Manage Students
+        </h2>
+        <div className="text-sm text-gray-600">
+          Total Students: <span className="font-bold text-blue-600">{students.length}</span>
+        </div>
+      </div>
 
       {/* ✅ Add / Update Student Form */}
-      <div
-        className={`rounded-2xl shadow-md p-6 mb-6 transition-all duration-300 ${
-          editingId ? "bg-yellow-50 border border-yellow-400" : "bg-white"
-        }`}
-      >
-        <form onSubmit={handleAddStudent} className="flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          {editingId ? "✏️ Edit Student" : "➕ Add New Student"}
+        </h3>
+        <form onSubmit={handleAddStudent} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { name: "name", placeholder: "First Name" },
             { name: "lastname", placeholder: "Last Name" },
@@ -129,42 +150,73 @@ const ManageStudents = () => {
               placeholder={input.placeholder}
               value={form[input.name] || ""}
               onChange={handleChange}
-              className="border border-gray-300 rounded-xl p-2 w-[180px] focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               required={input.name !== "email" && input.name !== "mobile"}
             />
           ))}
 
-          <button
-            type="submit"
-            className={`${
-              editingId
-                ? "bg-yellow-500 hover:bg-yellow-600"
-                : "bg-blue-600 hover:bg-blue-700"
-            } text-white font-semibold px-5 py-2 rounded-lg shadow-md transition-all duration-200`}
-          >
-            {editingId ? "✏️ Update Student" : "➕ Add Student"}
-          </button>
-
-          {!editingId && (
+          <div className="md:col-span-2 lg:col-span-4 flex gap-3 mt-4">
             <button
-              type="button"
-              className="flex items-center gap-2 bg-[var(--button-uplode)] text-white hover:bg-[var(--button-ulode-hover)] px-4 py-2 rounded-xl shadow-md"
+              type="submit"
+              className={`${
+                editingId
+                  ? "bg-yellow-500 hover:bg-yellow-600"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } text-white font-semibold px-6 py-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2`}
             >
-              <FiUpload /> Upload Excel
+              {editingId ? "✏️ Update Student" : "➕ Add Student"}
             </button>
-          )}
+
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({
+                    name: "",
+                    lastname: "",
+                    email: "",
+                    password: "",
+                    mobile: "",
+                    class: "",
+                    section: "",
+                    rollNumber: "",
+                  });
+                }}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition-all duration-200"
+              >
+                Cancel
+              </button>
+            )}
+
+            {!editingId && (
+              <button
+                type="button"
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-200"
+              >
+                <FiUpload /> Upload Excel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
       {/* ✅ Search Bar */}
-      <div className="mb-5">
-        <input
-          type="text"
-          placeholder="🔍 Search by name, class, or roll no"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border w-full md:w-1/2 rounded-xl p-3 shadow-sm focus:ring-2 focus:ring-yellow-400 outline-none"
-        />
+      <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="🔍 Search by name, class, or roll number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+          <div className="text-sm text-gray-600">
+            Showing {filtered.length} of {students.length} students
+          </div>
+        </div>
       </div>
 
       {/* ✅ Students Table */}

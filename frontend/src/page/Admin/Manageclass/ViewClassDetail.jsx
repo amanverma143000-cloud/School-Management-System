@@ -1,180 +1,293 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
-
-const initialClasses = [
-  { id: 1, name: "1st", teacher: "Mr. Sharma", totalStudents: 30 },
-  { id: 2, name: "2nd", teacher: "Mrs. Meena", totalStudents: 28 },
-  { id: 3, name: "3rd", teacher: "Mr. Arjun", totalStudents: 32 },
-  { id: 4, name: "4th", teacher: "Ms. Neha", totalStudents: 27 },
-  { id: 5, name: "5th", teacher: "Mr. Raj", totalStudents: 35 },
-];
-
-const initialClassDetails = {
-  teacher: "Mr. Verma",
-  subjects: ["Maths", "Science", "English", "Hindi"],
-  students: [
-    { name: "Aditi Sharma", roll: "01", attendance: "95%" },
-    { name: "Rohan Kumar", roll: "02", attendance: "88%" },
-    { name: "Priya Singh", roll: "03", attendance: "92%" },
-    { name: "Vikas Yadav", roll: "04", attendance: "85%" },
-    { name: "Simran Kaur", roll: "05", attendance: "90%" },
-  ],
-  totalAttendance: "91%",
-};
+import { motion, AnimatePresence } from "framer-motion";
+import { useGetAdminClassesQuery, useAddAdminClassMutation, useDeleteAdminClassMutation, useGetTeachersQuery } from "../../../../Api/SchoolApi";
+import { FaSchool, FaPlus, FaEye, FaEdit, FaTrash, FaUser, FaBook, FaClock } from "react-icons/fa";
 
 const ManageClasses = () => {
+  const { data: apiClasses = [], isLoading, refetch } = useGetAdminClassesQuery();
+  const { data: teachers = [] } = useGetTeachersQuery();
+  const [addClassMutation] = useAddAdminClassMutation();
+  const [deleteClassMutation] = useDeleteAdminClassMutation();
+  
   const [selectedClass, setSelectedClass] = useState(null);
-  const [classes, setClasses] = useState(initialClasses);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    section: "",
+    classTeacher: "",
+    subjects: "",
+    capacity: 40,
+    startTime: "09:00",
+    endTime: "15:00"
+  });
 
-  const handleRowClick = (e, cls) => {
-    if (e.target.nodeName === "BUTTON") return;
-    setSelectedClass(cls);
+  const classNames = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
+  const sections = ["A", "B", "C", "D", "E"];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="ml-4 text-xl text-gray-600">Loading classes...</div>
+      </div>
+    );
+  }
+
+  const handleAddClass = async (e) => {
+    e.preventDefault();
+    try {
+      await addClassMutation({
+        ...formData,
+        subjects: formData.subjects.split(",").map(s => s.trim()),
+        schedule: {
+          startTime: formData.startTime,
+          endTime: formData.endTime
+        }
+      });
+      setShowAddForm(false);
+      setFormData({
+        name: "",
+        section: "",
+        classTeacher: "",
+        subjects: "",
+        capacity: 40,
+        startTime: "09:00",
+        endTime: "15:00"
+      });
+      refetch();
+    } catch (error) {
+      console.error("Error adding class:", error);
+    }
   };
 
-  const handleEdit = (cls) => {
-    alert(`Edit feature for "${cls.name}" coming soon.`);
-  };
-
-  const handleDelete = (cls) => {
-    if (window.confirm(`Delete "${cls.name}"?`)) {
-      setClasses(classes.filter((c) => c.id !== cls.id));
-      if (selectedClass?.id === cls.id) setSelectedClass(null);
+  const handleDelete = async (classId) => {
+    if (window.confirm("Are you sure you want to delete this class?")) {
+      try {
+        await deleteClassMutation(classId);
+        refetch();
+      } catch (error) {
+        console.error("Error deleting class:", error);
+      }
     }
   };
 
   return (
-    <div className="min-h-screen  p-6 flex justify-center">
-      <motion.div
-        className="bg-white shadow-2xl rounded-2xl p-6 w-full max-w-5xl"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
-          {!selectedClass ? (
+          {!selectedClass && !showAddForm ? (
             <motion.div
               key="classList"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-white rounded-xl shadow-lg p-6"
             >
-              <h1 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-                🏫 Manage Classes
-              </h1>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl transition">
-                ➕ Add Class
-              </button>
-              <div className="mt-6 overflow-x-auto">
-                <table className="min-w-full border border-gray-300 text-center rounded-lg overflow-hidden">
-                  <thead style={{background:"var(--gradient-yellow)"}}>
-                    <tr>
-                      <th className="py-2 px-4">Class</th>
-                      <th className="py-2 px-4">Class Teacher</th>
-                      <th className="py-2 px-4">Total Students</th>
-                      <th className="py-2 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white text-gray-700">
-                    {classes.map((cls) => (
-                      <tr
-                        key={cls.id}
-                        className="border-b hover:bg-slate-100 transition cursor-pointer"
-                        onClick={(e) => handleRowClick(e, cls)}
-                      >
-                        <td className="py-2 px-4 font-semibold text-slate-800">
-                          {cls.name}
-                        </td>
-                        <td className="py-2 px-4">{cls.teacher}</td>
-                        <td className="py-2 px-4">{cls.totalStudents}</td>
-                        <td className="py-2 px-4 flex justify-center gap-3">
-                          <button
-                            className="text-blue-600 hover:scale-110 transition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedClass(cls);
-                            }}
-                          >
-                            👁️
-                          </button>
-                          <button
-                            className="text-green-600 hover:scale-110 transition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(cls);
-                            }}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="text-red-600 hover:scale-110 transition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(cls);
-                            }}
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <FaSchool className="text-3xl text-blue-600" />
+                  <h1 className="text-3xl font-bold text-gray-800">Manage Classes</h1>
+                </div>
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+                >
+                  <FaPlus /> Add Class
+                </button>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {apiClasses.map((cls) => (
+                  <motion.div
+                    key={cls._id}
+                    whileHover={{ y: -5 }}
+                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">{cls.name}</h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          <FaUser className="text-green-500" />
+                          <span>{cls.classTeacher?.name || "No Teacher"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          <FaBook className="text-blue-500" />
+                          <span>{cls.students?.length || 0} Students</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <FaClock className="text-orange-500" />
+                          <span>Capacity: {cls.capacity}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
+                      <span>Subjects: {cls.subjects?.join(", ") || "None"}</span>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setSelectedClass(cls)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm"
+                      >
+                        <FaEye /> View
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cls._id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
+                      >
+                        <FaTrash /> Delete
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          ) : showAddForm ? (
+            <motion.div
+              key="addForm"
+              initial={{ opacity: 0, x: 200 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -200 }}
+              className="bg-white rounded-xl shadow-lg p-6"
+            >
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Add New Class</h2>
+              <form onSubmit={handleAddClass} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Class Name</label>
+                  <select
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Class</option>
+                    {classNames.map((className) => (
+                      <option key={className} value={className}>{className}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                  <select
+                    value={formData.section}
+                    onChange={(e) => setFormData({...formData, section: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Section</option>
+                    {sections.map((section) => (
+                      <option key={section} value={section}>{section}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Class Teacher</label>
+                  <select
+                    value={formData.classTeacher}
+                    onChange={(e) => setFormData({...formData, classTeacher: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Teacher</option>
+                    {teachers.map((teacher) => (
+                      <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Subjects (comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.subjects}
+                    onChange={(e) => setFormData({...formData, subjects: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                    placeholder="Math, English, Science"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                  <input
+                    type="number"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-4">
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition"
+                  >
+                    Add Class
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-2 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </motion.div>
           ) : (
             <motion.div
               key="classDetails"
-              initial={{ x: 200, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -200, opacity: 0 }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
+              initial={{ opacity: 0, x: 200 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -200 }}
+              className="bg-white rounded-xl shadow-lg p-6"
             >
-              <h1 className="text-2xl font-bold text-slate-800 mb-4">
-                🏫 Class: {selectedClass.name}
-              </h1>
-              <p className="text-lg mb-2">
-                👨‍🏫 <b>Class Teacher:</b> {initialClassDetails.teacher}
-              </p>
-              <p className="text-lg mb-4">
-                📚 <b>Subjects:</b> {initialClassDetails.subjects.join(", ")}
-              </p>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-semibold text-slate-800">
-                  👥 Students List (with attendance %)
-                </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Class Details: {selectedClass.name}</h2>
+                <button
+                  onClick={() => setSelectedClass(null)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+                >
+                  ← Back
+                </button>
               </div>
-              <table className="min-w-full border border-gray-300 text-center rounded-lg overflow-hidden">
-                <thead className="bg-slate-800 text-white">
-                  <tr>
-                    <th className="py-2 px-4">Name</th>
-                    <th className="py-2 px-4">Roll No</th>
-                    <th className="py-2 px-4">Attendance %</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white text-gray-700">
-                  {initialClassDetails.students.map((s, i) => (
-                    <tr key={i} className="border-b hover:bg-slate-100">
-                      <td className="py-2 px-4 font-medium">{s.name}</td>
-                      <td className="py-2 px-4">{s.roll}</td>
-                      <td className="py-2 px-4">{s.attendance}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="mt-4 text-lg font-semibold text-slate-800">
-                📊 Total Attendance: {initialClassDetails.totalAttendance}
-              </p>
-              <button
-                onClick={() => setSelectedClass(null)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl transition mt-6"
-              >
-                ⬅️ Back
-              </button>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">Class Information</h3>
+                  <p><strong>Section:</strong> {selectedClass.section}</p>
+                  <p><strong>Capacity:</strong> {selectedClass.capacity}</p>
+                  <p><strong>Current Students:</strong> {selectedClass.students?.length || 0}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">Teacher & Schedule</h3>
+                  <p><strong>Class Teacher:</strong> {selectedClass.classTeacher?.name || "Not assigned"}</p>
+                  <p><strong>Schedule:</strong> {selectedClass.schedule?.startTime} - {selectedClass.schedule?.endTime}</p>
+                  <p><strong>Students:</strong> {selectedClass.students?.length || 0}</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-800 mb-2">Subjects</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedClass.subjects?.map((subject, index) => (
+                    <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {subject}
+                    </span>
+                  )) || <span className="text-gray-500">No subjects assigned</span>}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   );
 };

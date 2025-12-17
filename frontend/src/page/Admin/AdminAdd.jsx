@@ -1,140 +1,97 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
-import { FaExclamationTriangle } from "react-icons/fa";
+import { useAddAdminMutation } from "../../../Api/SchoolApi";
+import { FaUserPlus } from "react-icons/fa";
 
-const AdminAddSection = () => {
-  const [activeTab, setActiveTab] = useState("student");
+const AdminAdd = () => {
+  const [addAdmin, { isLoading }] = useAddAdminMutation();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    domain: ""
+  });
 
-  // Animation Variants
-  const formVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await addAdmin(formData);
+      alert("Admin added successfully!");
+      setFormData({ name: "", email: "", password: "", domain: "" });
+    } catch (error) {
+      alert("Failed to add admin");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
-      {/* Toggle Buttons */}
-      <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mb-8">
-        <button
-          onClick={() => setActiveTab("student")}
-          className={`w-full sm:w-auto px-6 py-2 rounded-lg font-semibold transition ${
-            activeTab === "student"
-              ? "bg-blue-600 text-white shadow-md"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Student
-        </button>
-
-        <button
-          onClick={() => setActiveTab("teacher")}
-          className={`w-full sm:w-auto px-6 py-2 rounded-lg font-semibold transition ${
-            activeTab === "teacher"
-              ? "bg-pink-600 text-white shadow-md"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Teacher
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <FaUserPlus className="text-3xl text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-800">Add New Admin</h1>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Domain</label>
+            <select
+              value={formData.domain}
+              onChange={(e) => setFormData({...formData, domain: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select Domain</option>
+              <option value="Management">Management</option>
+              <option value="Academics">Academics</option>
+              <option value="Finance">Finance</option>
+              <option value="HR">HR</option>
+              <option value="IT">IT</option>
+            </select>
+          </div>
+          
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+          >
+            {isLoading ? "Adding..." : "Add Admin"}
+          </button>
+        </form>
       </div>
-
-      {/* Forms Section */}
-      <AnimatePresence mode="wait">
-        {activeTab === "student" && (
-          <motion.div
-            key="student"
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="bg-white/80 backdrop-blur-md p-6 md:p-8 rounded-xl shadow-lg max-w-3xl mx-auto w-full"
-          >
-            <h2 className="text-xl sm:text-2xl font-bold mb-5 text-gray-800 text-center sm:text-left">
-              Add Student
-            </h2>
-
-            {/* Form Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input className="p-3 rounded-lg border" placeholder="First Name" />
-              <input className="p-3 rounded-lg border" placeholder="Last Name" />
-              <input className="p-3 rounded-lg border" placeholder="Father Name" />
-              <input className="p-3 rounded-lg border" placeholder="Mother Name" />
-              <input className="p-3 rounded-lg border" placeholder="Category" />
-              <input className="p-3 rounded-lg border" placeholder="Class" />
-              <input className="p-3 rounded-lg border" placeholder="Age" />
-              <input className="p-3 rounded-lg border" placeholder="Mobile Number" />
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-8">
-              <button className="w-full sm:w-auto px-5 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md hover:scale-105 transition">
-                Upload via Excel
-              </button>
-              <button className="w-full sm:w-auto px-5 py-2 rounded-lg bg-green-500 text-white shadow-md hover:scale-105 transition">
-                Submit
-              </button>
-            </div>
-
-            {/* Info Box */}
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mt-6 rounded-lg flex items-start gap-3 text-sm sm:text-base text-gray-800">
-              <FaExclamationTriangle className="text-yellow-600 mt-1" />
-              <p>
-                Please insert your file in this format: <br />
-                <b>name</b>, <b>father_name</b>, <b>mother_name</b>,{" "}
-                <b>category</b>, <b>class</b>, <b>age</b>
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === "teacher" && (
-          <motion.div
-            key="teacher"
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="bg-white/80 backdrop-blur-md p-6 md:p-8 rounded-xl shadow-lg max-w-3xl mx-auto w-full"
-          >
-            <h2 className="text-xl sm:text-2xl font-bold mb-5 text-gray-800 text-center sm:text-left">
-              Add Teacher
-            </h2>
-
-            {/* Form Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input className="p-3 rounded-lg border" placeholder="First Name" />
-              <input className="p-3 rounded-lg border" placeholder="Last Name" />
-              <input className="p-3 rounded-lg border" placeholder="Mobile Number" />
-              <input className="p-3 rounded-lg border" placeholder="Class Assign" />
-              <input className="p-3 rounded-lg border" placeholder="Age" />
-              <input className="p-3 rounded-lg border" placeholder="Subject Assign" />
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-8">
-              <button className="w-full sm:w-auto px-5 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-md hover:scale-105 transition">
-                Upload via Excel
-              </button>
-              <button className="w-full sm:w-auto px-5 py-2 rounded-lg bg-green-500 text-white shadow-md hover:scale-105 transition">
-                Submit
-              </button>
-            </div>
-
-            {/* Info Box */}
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mt-6 rounded-lg flex items-start gap-3 text-sm sm:text-base text-gray-800">
-              <FaExclamationTriangle className="text-yellow-600 mt-1" />
-              <p>
-                Please insert your file in this format: <br />
-                <b>name</b>, <b>skill</b>, <b>class assign</b>, <b>age</b>,{" "}
-                <b>subject assign</b>
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
-export default AdminAddSection;
+export default AdminAdd;

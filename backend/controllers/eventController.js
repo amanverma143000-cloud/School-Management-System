@@ -1,137 +1,37 @@
 import Event from "../models/Event.js";
-import Admin from "../models/Admin.js";
 
-// 📌 Create Event (Admin Reference Based)
-export const createEvent = async (req, res) => {
-  try {
-    const { title, date, description, createdBy, audience, isHoliday, location } = req.body;
-
-    // ✅ Check if the ID belongs to a valid Admin
-    const admin = await Admin.findById(createdBy);
-
-    if (!admin || admin.role !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied! Only valid admins can create events.",
-      });
-    }
-
-    // ✅ Create the event
-    const event = await Event.create({
-      title,
-      date,
-      description,
-      createdBy: admin._id, // store as reference
-      audience,
-      isHoliday,
-      location,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Event created successfully",
-      event,
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: "Error creating event",
-      error: error.message,
-    });
-  }
-};
-
-// 📌 Get All Events
 export const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find().sort({ date: 1 }); // Upcoming events first
-    res.status(200).json({
-      success: true,
-      count: events.length,
-      events,
-    });
+    const events = await Event.find().populate("createdBy", "name");
+    res.json(events);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching events",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// 📌 Get Single Event by ID
-export const getEventById = async (req, res) => {
+export const createEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id).populate("createdBy", "name email");
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
-    }
-    res.status(200).json({
-      success: true,
-      event,
-    });
+    const event = await Event.create(req.body);
+    res.status(201).json(event);
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: "Invalid Event ID",
-      error: error.message,
-    });
+    res.status(400).json({ message: error.message });
   }
 };
 
-// 📌 Update Event
 export const updateEvent = async (req, res) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Event updated successfully",
-      event,
-    });
+    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(event);
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: "Error updating event",
-      error: error.message,
-    });
+    res.status(400).json({ message: error.message });
   }
 };
 
-// 📌 Delete Event
 export const deleteEvent = async (req, res) => {
   try {
-    const event = await Event.findByIdAndDelete(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Event deleted successfully",
-    });
+    await Event.findByIdAndDelete(req.params.id);
+    res.json({ message: "Event deleted" });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: "Error deleting event",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };

@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useGetStudentsQuery, useGetTeachersQuery, useGetStudentAttendanceQuery, useGetTeacherAttendanceQuery } from "../../../Api/SchoolApi";
 
 const AttendanceReport = () => {
   const [selectedOption, setSelectedOption] = useState("class");
@@ -18,6 +19,29 @@ const AttendanceReport = () => {
   const [studentName, setStudentName] = useState("");
   const [studentClass, setStudentClass] = useState("");
   const [teacherName, setTeacherName] = useState("");
+  
+  // API calls
+  const { data: students = [] } = useGetStudentsQuery();
+  const { data: teachers = [] } = useGetTeachersQuery();
+  const { data: studentAttendance = [] } = useGetStudentAttendanceQuery();
+  const { data: teacherAttendance = [] } = useGetTeacherAttendanceQuery();
+  
+  // Get unique classes from students
+  const classes = [...new Set(students.map(s => `${s.class} - ${s.section}`))];
+  
+  // Get student names for dropdown
+  const studentOptions = students.map(s => ({
+    name: `${s.name} ${s.lastname}`,
+    class: `${s.class} - ${s.section}`,
+    id: s._id
+  }));
+  
+  // Get teacher names for dropdown
+  const teacherOptions = teachers.map(t => ({
+    name: t.name,
+    subjects: t.subjects?.join(", ") || "No subjects",
+    id: t._id
+  }));
 
   // Demo Data
   const attendanceData = {
@@ -117,9 +141,9 @@ const AttendanceReport = () => {
                 value={selectedClass}
               >
                 <option value="">-- Select Class --</option>
-                {[...Array(12)].map((_, i) => (
-                  <option key={i + 1} value={`Class ${i + 1}`}>
-                    Class {i + 1}
+                {classes.map((cls, i) => (
+                  <option key={i} value={cls}>
+                    {cls}
                   </option>
                 ))}
               </select>
@@ -215,22 +239,27 @@ const AttendanceReport = () => {
 
             {/* Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Student Name"
+              <select
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 className="p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
+              >
+                <option value="">Select Student</option>
+                {studentOptions.map((student, i) => (
+                  <option key={i} value={student.name}>
+                    {student.name} ({student.class})
+                  </option>
+                ))}
+              </select>
               <select
                 value={studentClass}
                 onChange={(e) => setStudentClass(e.target.value)}
                 className="p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <option value="">Select Class</option>
-                {[...Array(12)].map((_, i) => (
-                  <option key={i + 1} value={`Class ${i + 1}`}>
-                    Class {i + 1}
+                {classes.map((cls, i) => (
+                  <option key={i} value={cls}>
+                    {cls}
                   </option>
                 ))}
               </select>
@@ -335,13 +364,18 @@ const AttendanceReport = () => {
             </h2>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Enter Teacher Name"
+              <select
                 value={teacherName}
                 onChange={(e) => setTeacherName(e.target.value)}
                 className="flex-1 border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
+              >
+                <option value="">Select Teacher</option>
+                {teacherOptions.map((teacher, i) => (
+                  <option key={i} value={teacher.name}>
+                    {teacher.name} ({teacher.subjects})
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={handleTeacherSubmit}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:scale-105 transition"

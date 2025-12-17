@@ -1,5 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line
+import { useAuth } from "../../context/AuthProvider";
+import { 
+  useGetStudentsQuery, 
+  useGetTeachersQuery,
+  useGetEventsQuery,
+  useGetHomeworkQuery,
+  useGetNoticesQuery
+} from "../../../Api/SchoolApi";
 import {
   FaUserPlus,
   FaSchool,
@@ -26,12 +34,27 @@ import ResultOverview from "./ResultOverview";
 import LeaveManagement from "./LeaveManagement";
 import Announcements from "./Announcements";
 
-export default function AdminDashboard({ admin, setUser }) {
+export default function AdminDashboard() {
   const [active, setActive] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
-  const [profilePic, setProfilePic] = useState(admin?.profilePic || null);
+  const [profilePic, setProfilePic] = useState(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  
+  // API calls for dashboard data
+  const { data: studentsData, isLoading: studentsLoading } = useGetStudentsQuery();
+  const { data: teachersData, isLoading: teachersLoading } = useGetTeachersQuery();
+  const { data: eventsData } = useGetEventsQuery();
+  const { data: noticesData } = useGetNoticesQuery();
+  const { data: homeworkData } = useGetHomeworkQuery();
+  
+  // Redirect if not authenticated or not admin
+  useEffect(() => {
+    if (!user || user.role?.toLowerCase() !== 'admin') {
+      navigate('/login');
+    }
+  }, [user, navigate]);
 
   const menuItems = [
     { name: "Dashboard", icon: <MdAssessment /> },
@@ -47,9 +70,26 @@ export default function AdminDashboard({ admin, setUser }) {
   ];
 
   const handleLogout = () => {
-    if (setUser) setUser(null);
+    logout();
     navigate("/");
   };
+  
+  // Show loading if data is being fetched
+  if (studentsLoading || teachersLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading dashboard...</div>
+      </div>
+    );
+  }
+  
+  // Calculate dashboard stats with safe defaults
+  const totalStudents = Array.isArray(studentsData) ? studentsData.length : 0;
+  const totalTeachers = Array.isArray(teachersData) ? teachersData.length : 0;
+  const totalEvents = Array.isArray(eventsData) ? eventsData.length : 0;
+  const totalNotices = Array.isArray(noticesData) ? noticesData.length : 0;
+  const totalHomework = Array.isArray(homeworkData) ? homeworkData.length : 0;
+  const totalClasses = 12; // Static for now
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#fffdf3] via-[#fffbea] to-[#fff6d9]">
@@ -129,7 +169,7 @@ export default function AdminDashboard({ admin, setUser }) {
           className="text-gray-900 flex justify-between items-center px-6 py-4 backdrop-blur-md"
         >
           <h2 className="text-lg font-semibold tracking-wide">
-            Welcome, {admin?.name || "Admin"} 👋
+            Welcome, {user?.email?.split('@')[0] || "Admin"} 👋
           </h2>
 
           {/* 👤 Profile + Logout Buttons */}
@@ -186,19 +226,44 @@ export default function AdminDashboard({ admin, setUser }) {
                 📊 Dashboard Overview
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 mb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                 {[
                   {
                     title: "Total Students",
-                    value: "1,245",
+                    value: totalStudents.toString(),
                     icon: <FaUserPlus />,
+                    color: "text-blue-600"
                   },
                   {
                     title: "Total Teachers",
-                    value: "58",
+                    value: totalTeachers.toString(),
                     icon: <FaChalkboardTeacher />,
+                    color: "text-green-600"
                   },
-                  { title: "Total Classes", value: "12", icon: <FaSchool /> },
+                  { 
+                    title: "Total Events", 
+                    value: totalEvents.toString(), 
+                    icon: <MdCampaign />,
+                    color: "text-purple-600"
+                  },
+                  { 
+                    title: "Total Notices", 
+                    value: totalNotices.toString(), 
+                    icon: <MdAssessment />,
+                    color: "text-orange-600"
+                  },
+                  { 
+                    title: "Total Homework", 
+                    value: totalHomework.toString(), 
+                    icon: <FaBookOpen />,
+                    color: "text-red-600"
+                  },
+                  { 
+                    title: "Total Classes", 
+                    value: totalClasses.toString(), 
+                    icon: <FaSchool />,
+                    color: "text-indigo-600"
+                  },
                 ].map((stat, i) => (
                   <motion.div
                     key={i}
@@ -216,7 +281,7 @@ export default function AdminDashboard({ admin, setUser }) {
                           {stat.value}
                         </p>
                       </div>
-                      <div className="text-[var(--icon)] text-4xl">
+                      <div className={`text-4xl ${stat.color}`}>
                         {stat.icon}
                       </div>
                     </div>
@@ -224,24 +289,170 @@ export default function AdminDashboard({ admin, setUser }) {
                 ))}
               </div>
 
-              <motion.div
-                className="p-6 rounded-2xl shadow-sm mt-7"
-                style={{
-                  backgroundColor: "var(--background-color)",
-                  boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-2">
-                  🌟 Welcome to the School Admin Dashboard
-                </h3>
-                <p className="text-gray-700">
-                  Manage students, teachers, classes, attendance, and
-                  announcements — all from one clean dashboard.
-                </p>
-              </motion.div>
+              {/* Recent Activities Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                {/* Recent Students */}
+                <motion.div
+                  className="p-6 rounded-2xl shadow-sm"
+                  style={{
+                    backgroundColor: "var(--background-color)",
+                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                  }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                    👥 Recent Students
+                  </h3>
+                  <div className="space-y-3">
+                    {Array.isArray(studentsData) && studentsData.slice(0, 3).map((student, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-800">{student.name} {student.lastname}</p>
+                          <p className="text-sm text-gray-600">{student.class} - {student.section}</p>
+                        </div>
+                        <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                          {student.rollNumber}
+                        </span>
+                      </div>
+                    )) || <p className="text-gray-500">No students found</p>}
+                  </div>
+                </motion.div>
+
+                {/* Recent Teachers */}
+                <motion.div
+                  className="p-6 rounded-2xl shadow-sm"
+                  style={{
+                    backgroundColor: "var(--background-color)",
+                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                  }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                    👨‍🏫 Recent Teachers
+                  </h3>
+                  <div className="space-y-3">
+                    {Array.isArray(teachersData) && teachersData.slice(0, 3).map((teacher, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-800">{teacher.name}</p>
+                          <p className="text-sm text-gray-600">{teacher.subjects?.join(", ") || "No subjects"}</p>
+                        </div>
+                        <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
+                          {teacher.experience || 0}y exp
+                        </span>
+                      </div>
+                    )) || <p className="text-gray-500">No teachers found</p>}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Recent Homework & Events */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                {/* Recent Homework */}
+                <motion.div
+                  className="p-6 rounded-2xl shadow-sm"
+                  style={{
+                    backgroundColor: "var(--background-color)",
+                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                    📚 Recent Homework
+                  </h3>
+                  <div className="space-y-3">
+                    {Array.isArray(homeworkData) && homeworkData.slice(0, 3).map((homework, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-800">{homework.title}</p>
+                          <p className="text-sm text-gray-600">{homework.assignedBy?.name || "Unknown Teacher"}</p>
+                          <p className="text-xs text-gray-500">{homework.assignedTo?.length || 0} students assigned</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-1 rounded block mb-1 ${
+                            new Date(homework.dueDate) > new Date() 
+                              ? "bg-green-200 text-green-800" 
+                              : "bg-red-200 text-red-800"
+                          }`}>
+                            {new Date(homework.dueDate) > new Date() ? "Active" : "Expired"}
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            Due: {new Date(homework.dueDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    )) || <p className="text-gray-500">No homework found</p>}
+                  </div>
+                </motion.div>
+
+                {/* Recent Events */}
+                <motion.div
+                  className="p-6 rounded-2xl shadow-sm"
+                  style={{
+                    backgroundColor: "var(--background-color)",
+                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                    📅 Upcoming Events
+                  </h3>
+                  <div className="space-y-3">
+                    {Array.isArray(eventsData) && eventsData.slice(0, 3).map((event, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-800">{event.title}</p>
+                          <p className="text-sm text-gray-600">{event.location}</p>
+                        </div>
+                        <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded">
+                          {new Date(event.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )) || <p className="text-gray-500">No events found</p>}
+                  </div>
+                </motion.div>
+
+                {/* Recent Notices */}
+                <motion.div
+                  className="p-6 rounded-2xl shadow-sm"
+                  style={{
+                    backgroundColor: "var(--background-color)",
+                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                    📢 Recent Notices
+                  </h3>
+                  <div className="space-y-3">
+                    {Array.isArray(noticesData) && noticesData.slice(0, 3).map((notice, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-800">{notice.title}</p>
+                          <p className="text-sm text-gray-600">{notice.audience}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          notice.isImportant 
+                            ? "bg-red-200 text-red-800" 
+                            : "bg-orange-200 text-orange-800"
+                        }`}>
+                          {notice.isImportant ? "Important" : "Normal"}
+                        </span>
+                      </div>
+                    )) || <p className="text-gray-500">No notices found</p>}
+                  </div>
+                </motion.div>
+              </div>
             </>
           ) : active === "Manage Student" ? (
             <ManageStudents />
@@ -315,10 +526,13 @@ export default function AdminDashboard({ admin, setUser }) {
             {/* Name & Email */}
             <div className="text-gray-700 space-y-2">
               <p>
-                <strong>Name:</strong> {admin?.name || "Not available"}
+                <strong>Name:</strong> {user?.email?.split('@')[0] || "Admin"}
               </p>
               <p>
-                <strong>Email:</strong> {admin?.email || "Not available"}
+                <strong>Email:</strong> {user?.email || "Not available"}
+              </p>
+              <p>
+                <strong>Role:</strong> {user?.role || "Admin"}
               </p>
             </div>
 

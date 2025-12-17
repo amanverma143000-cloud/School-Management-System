@@ -1,62 +1,31 @@
 import React, { useState } from "react";
+import { useGetStudentLeavesQuery } from "../../../Api/SchoolApi";
 
 const LeaveManagement = () => {
-  // Dummy Data
-  const leaves = [
-    {
-      id: 1,
-      studentName: "Aman Verma",
-      class: "10th",
-      from: "2025-11-10",
-      to: "2025-11-12",
-      reason: "Fever",
-      status: "Pending",
-      teacher: "Mr. Sharma",
-    },
-    {
-      id: 2,
-      studentName: "Priya Singh",
-      class: "9th",
-      from: "2025-11-05",
-      to: "2025-11-07",
-      reason: "Family Function",
-      status: "Approved",
-      teacher: "Mrs. Gupta",
-    },
-    {
-      id: 3,
-      studentName: "Rahul Mehta",
-      class: "8th",
-      from: "2025-11-15",
-      to: "2025-11-17",
-      reason: "Cold & Cough",
-      status: "Rejected",
-      teacher: "Mr. Raj",
-    },
-    {
-      id: 4,
-      studentName: "Sneha Patel",
-      class: "11th",
-      from: "2025-11-20",
-      to: "2025-11-21",
-      reason: "Medical Checkup",
-      status: "Approved",
-      teacher: "Mrs. Kaur",
-    },
-    {
-      id: 5,
-      studentName: "Rohit Yadav",
-      class: "12th",
-      from: "2025-11-18",
-      to: "2025-11-19",
-      reason: "Competition",
-      status: "Pending",
-      teacher: "Mr. Sharma",
-    },
-  ];
+  // ✅ सभी hooks सबसे ऊपर
+  const { data: apiLeaves = [], isLoading } = useGetStudentLeavesQuery();
+  const [filter, setFilter] = useState("All"); // ✅ यहाँ move किया
 
-  // Filter state
-  const [filter, setFilter] = useState("All");
+  // Transform API data - conditional check के साथ
+  const leaves = isLoading ? [] : apiLeaves.map(leave => ({
+    id: leave._id,
+    studentName: leave.requester?.name + " " + leave.requester?.lastname || "Unknown Student",
+    class: leave.requester?.class + " - " + leave.requester?.section || "Unknown Class",
+    from: new Date(leave.fromDate).toLocaleDateString(),
+    to: new Date(leave.toDate).toLocaleDateString(),
+    reason: leave.reason,
+    status: leave.status,
+    teacher: leave.teacher?.name || "Unknown Teacher",
+  }));
+  
+  // ✅ Loading check hooks के बाद
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading leave requests...</div>
+      </div>
+    );
+  }
 
   // Function for color badge
   const getStatusBadge = (status) => {

@@ -1,4 +1,5 @@
 import express from "express";
+import Student from "../models/Student.js";
 import {
   createStudent,
   getAllStudents,
@@ -9,6 +10,16 @@ import {
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+
+// Test route without auth
+router.get("/test", async (req, res) => {
+  try {
+    const count = await Student.countDocuments();
+    res.json({ message: "Student routes working", studentCount: count });
+  } catch (error) {
+    res.json({ message: "Error", error: error.message });
+  }
+});
 
 // All student management routes (admin-only)
 router.use(protect);                 // Login required

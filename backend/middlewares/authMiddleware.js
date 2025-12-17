@@ -22,18 +22,19 @@ export const protect = async (req, res, next) => {
 
       // 3️⃣ Fetch user based on role
       let user;
-      switch (decoded.role) {
-        case "Admin":
-          user = await Admin.findById(decoded.id).select("-password");
-          break;
-        case "Teacher":
-          user = await Teacher.findById(decoded.id).select("-password");
-          break;
-        case "Student":
-          user = await Student.findById(decoded.id).select("-password");
-          break;
-        default:
-          return res.status(401).json({ message: "Invalid user role" });
+      const role = decoded.role || decoded.userRole;
+      
+      if (role === "Admin" || role === "admin") {
+        user = await Admin.findById(decoded.id).select("-password");
+        if (user) user.role = "Admin";
+      } else if (role === "Teacher" || role === "teacher") {
+        user = await Teacher.findById(decoded.id).select("-password");
+        if (user) user.role = "Teacher";
+      } else if (role === "Student" || role === "student") {
+        user = await Student.findById(decoded.id).select("-password");
+        if (user) user.role = "Student";
+      } else {
+        return res.status(401).json({ message: "Invalid user role" });
       }
 
       if (!user) {
@@ -56,7 +57,10 @@ export const protect = async (req, res, next) => {
 // Role-based authorization
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    const userRole = req.user?.role?.toLowerCase();
+    const allowedRoles = roles.map(role => role.toLowerCase());
+    
+    if (!req.user || !allowedRoles.includes(userRole)) {
       return res.status(403).json({
         message: `Only ${roles.join("/")} can access this route`,
       });

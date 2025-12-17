@@ -1,13 +1,17 @@
 // 📁 src/components/Attendance/TeacherAttendance.jsx
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line
+import { useGetTeachersQuery } from "../../../../Api/SchoolApi";
 
 export default function TeacherAttendance({ goBack }) {
-  const teachers = [
-    { id: 1, name: "Mr. Sharma" },
-    { id: 2, name: "Mrs. Gupta" },
-    { id: 3, name: "Mr. Singh" },
-  ];
+  const { data: teachersData = [], isLoading } = useGetTeachersQuery();
+  
+  const teachers = teachersData.map(teacher => ({
+    id: teacher._id,
+    name: teacher.name,
+    subjects: teacher.subjects?.join(", ") || "No subjects",
+    experience: teacher.experience || 0
+  }));
 
   const [attendance, setAttendance] = useState({});
   const [savedAttendance, setSavedAttendance] = useState(null);
@@ -51,6 +55,14 @@ export default function TeacherAttendance({ goBack }) {
 
   const allMarked =
     teachers.length > 0 && teachers.every((t) => attendance[t.id]);
+    
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading teachers...</div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -129,7 +141,13 @@ export default function TeacherAttendance({ goBack }) {
                   whileHover={{ scale: 1.01 }}
                   className="border-b hover:bg-gray-50"
                 >
-                  <td className="p-3">{teacher.name}</td>
+                  <td className="p-3">
+                    <div>
+                      <div className="font-medium">{teacher.name}</div>
+                      <div className="text-sm text-gray-500">{teacher.subjects}</div>
+                      <div className="text-xs text-gray-400">{teacher.experience} years exp</div>
+                    </div>
+                  </td>
                   <td className="p-3 text-center space-x-3">
                     {["Present", "Absent", "Leave"].map((status) => {
                       const isActive = attendance[teacher.id] === status;

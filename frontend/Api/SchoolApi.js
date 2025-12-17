@@ -6,7 +6,11 @@ export const schoolApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:3000/api",
     prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth?.token;
+      // Try Redux store first, then localStorage
+      let token = getState().auth?.token;
+      if (!token) {
+        token = localStorage.getItem("token");
+      }
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -14,7 +18,7 @@ export const schoolApi = createApi({
     }
   }),
 
-  tagTypes: ["Admin", "Teacher", "Student", "Event", "Notice", "Exam", "Homework", "Result", "Leave"],
+  tagTypes: ["Admin", "Teacher", "Student", "Event", "Notice", "Exam", "Homework", "Result", "Leave", "Class", "Holiday"],
 
   endpoints: (builder) => ({
 
@@ -163,7 +167,7 @@ export const schoolApi = createApi({
     }),
 
     getNotices: builder.query({
-      query: () => "/admin/notices/notice/all",
+      query: () => "/admin/notices",
       providesTags: ["Notice"]
     }),
 
@@ -237,7 +241,7 @@ export const schoolApi = createApi({
     }),
 
     getHomework: builder.query({
-      query: () => "/teacher/homework/homework/all",
+      query: () => "/admin/homework",
       providesTags: ["Homework"]
     }),
 
@@ -274,7 +278,7 @@ export const schoolApi = createApi({
     }),
 
     getResults: builder.query({
-      query: () => "/teacher/result/resultget",
+      query: () => "/admin/results",
       providesTags: ["Result"]
     }),
 
@@ -320,8 +324,121 @@ export const schoolApi = createApi({
     }),
 
     getStudentLeaves: builder.query({
-      query: () => "/student/leave/leave/student",
+      query: () => "/admin/leaves",
       providesTags: ["Leave"]
+    }),
+
+    // 🔹 Admin Unified Routes -----------------------
+    getAdminEvents: builder.query({
+      query: () => "/admin/events",
+      providesTags: ["Event"]
+    }),
+
+    getAdminHomework: builder.query({
+      query: () => "/admin/homework",
+      providesTags: ["Homework"]
+    }),
+
+    getAdminLeaves: builder.query({
+      query: () => "/admin/leaves",
+      providesTags: ["Leave"]
+    }),
+
+    getAdminNotices: builder.query({
+      query: () => "/admin/notices",
+      providesTags: ["Notice"]
+    }),
+
+    getStudentAttendance: builder.query({
+      query: () => "/admin/attendance/students",
+      providesTags: ["Attendance"]
+    }),
+
+    getTeacherAttendance: builder.query({
+      query: () => "/admin/attendance/teachers",
+      providesTags: ["Attendance"]
+    }),
+
+    getAdminResults: builder.query({
+      query: () => "/admin/results",
+      providesTags: ["Result"]
+    }),
+
+    // Admin CRUD operations
+    getAdmins: builder.query({
+      query: () => "/admin/admins",
+      providesTags: ["Admin"]
+    }),
+
+    addAdmin: builder.mutation({
+      query: (data) => ({
+        url: "/admin/admins",
+        method: "POST",
+        body: data
+      }),
+      invalidatesTags: ["Admin"]
+    }),
+
+    deleteUser: builder.mutation({
+      query: ({ type, id }) => ({
+        url: `/admin/${type}s/${id}`,
+        method: "DELETE"
+      }),
+      invalidatesTags: ["Admin", "Teacher", "Student"]
+    }),
+
+    // Holidays
+    getHolidays: builder.query({
+      query: () => "/admin/holidays",
+      providesTags: ["Holiday"]
+    }),
+
+    addHoliday: builder.mutation({
+      query: (data) => ({
+        url: "/admin/holidays",
+        method: "POST",
+        body: data
+      }),
+      invalidatesTags: ["Holiday"]
+    }),
+
+    deleteHoliday: builder.mutation({
+      query: (id) => ({
+        url: `/admin/holidays/${id}`,
+        method: "DELETE"
+      }),
+      invalidatesTags: ["Holiday"]
+    }),
+
+    getAdminClasses: builder.query({
+      query: () => "/admin/classes",
+      providesTags: ["Class"]
+    }),
+
+    addAdminClass: builder.mutation({
+      query: (data) => ({
+        url: "/admin/classes",
+        method: "POST",
+        body: data
+      }),
+      invalidatesTags: ["Class"]
+    }),
+
+    updateAdminClass: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/admin/classes/${id}`,
+        method: "PUT",
+        body: data
+      }),
+      invalidatesTags: ["Class"]
+    }),
+
+    deleteAdminClass: builder.mutation({
+      query: (id) => ({
+        url: `/admin/classes/${id}`,
+        method: "DELETE"
+      }),
+      invalidatesTags: ["Class"]
     }),
 
   }),
@@ -376,5 +493,23 @@ export const {
 
   useAddLeaveMutation,
   useUpdateLeaveMutation,
-  useGetStudentLeavesQuery
+  useGetStudentLeavesQuery,
+
+  useGetAdminEventsQuery,
+  useGetAdminHomeworkQuery,
+  useGetAdminLeavesQuery,
+  useGetAdminNoticesQuery,
+  useGetStudentAttendanceQuery,
+  useGetTeacherAttendanceQuery,
+  useGetAdminResultsQuery,
+  useGetAdminClassesQuery,
+  useAddAdminClassMutation,
+  useUpdateAdminClassMutation,
+  useDeleteAdminClassMutation,
+  useGetAdminsQuery,
+  useAddAdminMutation,
+  useDeleteUserMutation,
+  useGetHolidaysQuery,
+  useAddHolidayMutation,
+  useDeleteHolidayMutation
 } = schoolApi;

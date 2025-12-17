@@ -9,7 +9,7 @@ export const useAuth = () => useContext(AuthContext);
 
 // Provider
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined); // undefined = loading, null = not logged in
   const [loading, setLoading] = useState(true);
 
   // On page load, get user from localStorage
@@ -17,7 +17,12 @@ const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
-    if (token && role && email) setUser({ token, role, email });
+    
+    if (token && role && email) {
+      setUser({ token, role, email });
+    } else {
+      setUser(null);
+    }
     setLoading(false);
   }, []);
 
@@ -36,9 +41,17 @@ const AuthProvider = ({ children }) => {
     window.location.href = "/";
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

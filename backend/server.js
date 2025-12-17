@@ -11,6 +11,7 @@ import homework from "./routes/homeworkRoutes.js";
 import LeaveRequest from "./routes/leaveRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
 import resultRoute from "./routes/resultRoutes.js";
+import adminAllRoutes from "./routes/adminAllRoutes.js";
 import cors from "cors";
 dotenv.config();
 const app = express();
@@ -33,7 +34,6 @@ console.log("JWT Secret:", process.env.JWT_SECRET);
 
 // Routes
 app.use("/api/auth", adminRoutes);       // Admin routes
-       // User routes (if any)
 app.use("/api/admin/teachers", teacherRoutes);       // Teacher management routes
 app.use("/api/admin/students", studentRoutes);
 app.use("/api/admin/events", eventRoutes);
@@ -42,7 +42,9 @@ app.use("/api/teacher/exam", exmaRoutes);
 app.use("/api/teacher/homework", homework);
 app.use("api/teacheer/result", resultRoute);
 app.use("api/teacheer/exam", examRoutes);
-app.use("/api/student/leave", LeaveRequest);// Student management routes
+app.use("/api/student/leave", LeaveRequest);
+
+app.use("/api/admin", adminAllRoutes);
 
 // Default route
 app.get("/", (req, res) => {

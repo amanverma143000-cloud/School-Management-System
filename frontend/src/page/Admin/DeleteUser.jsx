@@ -1,126 +1,83 @@
 import React, { useState } from "react";
-import { FaUserGraduate, FaChalkboardTeacher, FaTrashAlt } from "react-icons/fa";
+import { useGetStudentsQuery, useGetTeachersQuery, useGetAdminsQuery, useDeleteUserMutation } from "../../../Api/SchoolApi";
+import { FaTrash, FaUser } from "react-icons/fa";
 
 const DeleteUser = () => {
-  // State Management
-  const [studentEmail, setStudentEmail] = useState("");
-  const [studentPassword, setStudentPassword] = useState("");
-  const [teacherEmail, setTeacherEmail] = useState("");
-  const [teacherPassword, setTeacherPassword] = useState("");
-
-  // Delete Student Handler
-  const handleDeleteStudent = async () => {
-    if (!studentEmail || !studentPassword) {
-      alert("Please fill all student fields before deleting.");
-      return;
-    }
-    if (!window.confirm("⚠️ This will permanently delete the student record. Continue?")) return;
-
-    try {
-      const res = await fetch("http://localhost:5000/api/delete/student", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: studentEmail, password: studentPassword }),
-      });
-      const data = await res.json();
-      alert(data.message || "Student deleted successfully!");
-      setStudentEmail("");
-      setStudentPassword("");
-    // eslint-disable-next-line no-unused-vars
-    } catch (error) {
-      alert("Error deleting student!");
+  const { data: students = [] } = useGetStudentsQuery();
+  const { data: teachers = [] } = useGetTeachersQuery();
+  const { data: admins = [] } = useGetAdminsQuery();
+  const [deleteUser] = useDeleteUserMutation();
+  
+  const [selectedType, setSelectedType] = useState("student");
+  
+  const handleDelete = async (type, id, name) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      try {
+        await deleteUser({ type, id });
+        alert("User deleted successfully!");
+      } catch (error) {
+        alert("Failed to delete user");
+      }
     }
   };
 
-  // Delete Teacher Handler
-  const handleDeleteTeacher = async () => {
-    if (!teacherEmail || !teacherPassword) {
-      alert("Please fill all teacher fields before deleting.");
-      return;
+  const renderUsers = () => {
+    let users = [];
+    switch(selectedType) {
+      case "student":
+        users = students.map(s => ({ ...s, type: "student" }));
+        break;
+      case "teacher":
+        users = teachers.map(t => ({ ...t, type: "teacher" }));
+        break;
+      case "admin":
+        users = admins.map(a => ({ ...a, type: "admin" }));
+        break;
     }
-    if (!window.confirm("⚠️ This will permanently delete the teacher record. Continue?")) return;
 
-    try {
-      const res = await fetch("http://localhost:5000/api/delete/teacher", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: teacherEmail, password: teacherPassword }),
-      });
-      const data = await res.json();
-      alert(data.message || "Teacher deleted successfully!");
-      setTeacherEmail("");
-      setTeacherPassword("");
-    // eslint-disable-next-line no-unused-vars
-    } catch (error) {
-      alert("Error deleting teacher!");
-    }
+    return users.map((user) => (
+      <div key={user._id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+        <div className="flex items-center gap-3">
+          <FaUser className="text-gray-500" />
+          <div>
+            <p className="font-medium">{user.name} {user.lastname || ""}</p>
+            <p className="text-sm text-gray-600">{user.email}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => handleDelete(selectedType, user._id, user.name)}
+          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+        >
+          <FaTrash /> Delete
+        </button>
+      </div>
+    ));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full">
-        
-        {/* 🔴 Delete Student Card */}
-        <div className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl p-6 hover:shadow-xl transition">
-          <div className="flex items-center gap-3 mb-5">
-            <FaUserGraduate className="text-red-500 text-2xl" />
-            <h2 className="text-xl font-bold text-gray-800">Delete Student</h2>
-          </div>
-
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Enter Student Email"
-              value={studentEmail}
-              onChange={(e) => setStudentEmail(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
-            />
-            <input
-              type="password"
-              placeholder="Enter Student Password"
-              value={studentPassword}
-              onChange={(e) => setStudentPassword(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
-            />
-
-            <button
-              onClick={handleDeleteStudent}
-              className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition transform hover:scale-105"
-            >
-              <FaTrashAlt /> Delete Student
-            </button>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <FaTrash className="text-3xl text-red-600" />
+          <h1 className="text-3xl font-bold text-gray-800">Delete Users</h1>
         </div>
-
-        {/* 🟣 Delete Teacher Card */}
-        <div className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl p-6 hover:shadow-xl transition">
-          <div className="flex items-center gap-3 mb-5">
-            <FaChalkboardTeacher className="text-purple-500 text-2xl" />
-            <h2 className="text-xl font-bold text-gray-800">Delete Teacher</h2>
-          </div>
-
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Enter Teacher Email"
-              value={teacherEmail}
-              onChange={(e) => setTeacherEmail(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none"
-            />
-            <input
-              type="password"
-              placeholder="Enter Teacher Password"
-              value={teacherPassword}
-              onChange={(e) => setTeacherPassword(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none"
-            />
-
-            <button
-              onClick={handleDeleteTeacher}
-              className="w-full flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition transform hover:scale-105"
+        
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select User Type</label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500"
             >
-              <FaTrashAlt /> Delete Teacher
-            </button>
+              <option value="student">Students</option>
+              <option value="teacher">Teachers</option>
+              <option value="admin">Admins</option>
+            </select>
+          </div>
+          
+          <div className="space-y-4">
+            {renderUsers()}
           </div>
         </div>
       </div>

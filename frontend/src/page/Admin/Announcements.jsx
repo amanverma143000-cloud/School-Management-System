@@ -1,27 +1,24 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState } from "react";
+import { useGetNoticesQuery, useAddNoticeMutation, useDeleteNoticeMutation } from "../../../Api/SchoolApi";
 
 const Announcements = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // ✅ Step 1: Fetch data from API when page loads
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      const res = await axios.get("http://localhost:8080/api/announcements");
-      setAnnouncements(res.data);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching announcements:", err);
-      setLoading(false);
-    }
-  };
+  const { data: apiNotices, isLoading, refetch } = useGetNoticesQuery();
+  const [addNotice] = useAddNoticeMutation();
+  const [deleteNotice] = useDeleteNoticeMutation();
+  
+  // ✅ सुरक्षित data transformation - Array.isArray() check
+  const announcements = Array.isArray(apiNotices) 
+    ? apiNotices.map(notice => ({
+        id: notice._id,
+        title: notice.title || "No Title",
+        message: notice.description || "No Description",
+        audience: notice.audience || "All",
+        isImportant: notice.isImportant || false,
+        createdAt: notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : "N/A"
+      }))
+    : []; // ✅ अगर apiNotices array नहीं है तो empty array use करें
 
   // ✅ Step 2: Add new announcement (POST request)
   const handleAdd = async () => {
@@ -31,15 +28,19 @@ const Announcements = () => {
     }
 
     try {
-      const newAnnouncement = { title, message };
-      await axios.post("http://localhost:8080/api/announcements", newAnnouncement);
+      await addNotice({ 
+        title, 
+        description: message,
+        audience: "All",
+        isImportant: false 
+      });
 
       // Reset inputs
       setTitle("");
       setMessage("");
-
+      
       // Refresh list
-      fetchAnnouncements();
+      refetch();
     } catch (err) {
       console.error("Error adding announcement:", err);
     }
@@ -48,8 +49,8 @@ const Announcements = () => {
   // ✅ Step 3: Delete announcement (DELETE request)
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:8080/api/announcements/${id}`);
-      fetchAnnouncements();
+      await deleteNotice(id);
+      refetch();
     } catch (err) {
       console.error("Error deleting announcement:", err);
     }
@@ -100,7 +101,7 @@ const Announcements = () => {
           All Announcements
         </h2>
 
-        {loading ? (
+        {isLoading ? (
           <p className="text-center text-gray-500 py-8">Loading...</p>
         ) : announcements.length === 0 ? (
           <p className="text-center text-gray-500 py-8">
@@ -118,6 +119,15 @@ const Announcements = () => {
                   Message
                 </th>
                 <th className="p-3 text-left font-semibold text-gray-700">
+                  Audience
+                </th>
+                <th className="p-3 text-left font-semibold text-gray-700">
+                  Date
+                </th>
+                <th className="p-3 text-left font-semibold text-gray-700">
+                  Status
+                </th>
+                <th className="p-3 text-left font-semibold text-gray-700">
                   Action
                 </th>
               </tr>
@@ -132,10 +142,21 @@ const Announcements = () => {
                   <td className="p-3">{index + 1}</td>
                   <td className="p-3 font-medium text-gray-800">{item.title}</td>
                   <td className="p-3 text-gray-600">{item.message}</td>
+                  <td className="p-3">{item.audience}</td>
+                  <td className="p-3">{item.createdAt}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      item.isImportant 
+                        ? "bg-red-100 text-red-700" 
+                        : "bg-green-100 text-green-700"
+                    }`}>
+                      {item.isImportant ? "Important" : "Normal"}
+                    </span>
+                  </td>
                   <td className="p-3">
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="text-red-500 hover:text-red-700 font-semibold"
+                      className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
                     >
                       Delete
                     </button>

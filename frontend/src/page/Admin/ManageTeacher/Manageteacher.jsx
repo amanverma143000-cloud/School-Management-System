@@ -1,57 +1,58 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
+import {
+  useGetTeachersQuery,
+  useAddTeacherMutation,
+  useUpdateTeacherMutation,
+  useDeleteTeacherMutation,
+} from "../../../../Api/SchoolApi";
 
 const ManageTeachers = () => {
-  const [teachers, setTeachers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    subject: "",
     email: "",
-    contact: "",
-    assignedClass: "",
+    password: "teacher123",
+    mobile: "",
+    location: "",
+    experience: 0,
+    subjects: [],
   });
 
-  // 🔹 FETCH ALL TEACHERS (GET API)
-  useEffect(() => {
-    fetchTeachers();
-  }, []);
-
-  const fetchTeachers = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(
-        "http://localhost:3000/api/admin/teachers/teacher/all",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setTeachers(res.data);
-    } catch (err) {
-      console.error("Error fetching teachers:", err);
-      console.log(err.response?.data);
-    }
-  };
+  // RTK Query hooks
+  const { data: teachers = [], isLoading, refetch } = useGetTeachersQuery();
+  const [addTeacher] = useAddTeacherMutation();
+  const [updateTeacher] = useUpdateTeacherMutation();
+  const [deleteTeacher] = useDeleteTeacherMutation();
 
   // 🔹 OPEN / CLOSE MODAL
   const openModal = (type, teacher = null) => {
     setModalType(type);
     setSelectedTeacher(teacher);
-    setFormData(
-      teacher || {
-        name: teacher.name,
-        subject: teacher.subject,
+    if (teacher) {
+      setFormData({
+        name: teacher.name || "",
+        email: teacher.email || "",
+        password: "teacher123",
+        mobile: teacher.mobile || "",
+        location: teacher.location || "",
+        experience: teacher.experience || 0,
+        subjects: teacher.subjects || [],
+      });
+    } else {
+      setFormData({
+        name: "",
         email: "",
-        contact: "",
-        assignedClass: "",
-      }
-    );
+        password: "teacher123",
+        mobile: "",
+        location: "",
+        experience: 0,
+        subjects: [],
+      });
+    }
     setShowModal(true);
   };
 
@@ -61,73 +62,34 @@ const ManageTeachers = () => {
     setModalType("");
   };
 
-  // 🔹 ADD / EDIT / DELETE / ASSIGN APIs
+  // 🔹 ADD / EDIT / DELETE APIs using RTK Query
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem("token");
-
       if (modalType === "add") {
-        await axios.post(
-          "http://localhost:3000/api/admin/teachers/teacher/add",
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await addTeacher(formData).unwrap();
+        alert("✅ Teacher added successfully!");
       } else if (modalType === "edit" && selectedTeacher) {
-        await axios.put(
-          `http://localhost:3000/api/admin/teachers/teacher/update/${selectedTeacher._id}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await updateTeacher({ id: selectedTeacher._id, data: formData }).unwrap();
+        alert("✅ Teacher updated successfully!");
       }
-      fetchTeachers();
+      refetch();
       closeModal();
     } catch (err) {
       console.error("Error saving teacher:", err);
+      alert("❌ Error saving teacher");
     }
   };
 
   const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this teacher?")) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(
-        `http://localhost:3000/api/admin/teachers/teacher/delete/${selectedTeacher._id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      fetchTeachers();
+      await deleteTeacher(selectedTeacher._id).unwrap();
+      alert("🗑️ Teacher deleted successfully!");
+      refetch();
       closeModal();
     } catch (err) {
       console.error("Error deleting teacher:", err);
-    }
-  };
-
-  const handleAssignClass = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `http://localhost:3000/api/admin/teachers/teacher/update/${selectedTeacher._id}`,
-        { assignedClass: formData.assignedClass },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      fetchTeachers();
-      closeModal();
-    } catch (err) {
-      console.error("Error assigning class:", err);
+      alert("❌ Error deleting teacher");
     }
   };
 
@@ -153,15 +115,18 @@ const ManageTeachers = () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200"
       >
-        {teachers.length > 0 ? (
+        {isLoading ? (
+          <p className="text-center text-gray-500 p-6">⏳ Loading teachers...</p>
+        ) : teachers.length > 0 ? (
           <table className="min-w-full border-collapse">
             <thead style={{background:"var(--gradient-yellow)"}}>
               <tr>
                 <th className="p-4 text-left font-medium">Name</th>
-                <th className="p-4 text-left font-medium">Subject</th>
+                <th className="p-4 text-left font-medium">Subjects</th>
                 <th className="p-4 text-left font-medium">Email</th>
-                <th className="p-4 text-left font-medium">Contact</th>
-                <th className="p-4 text-left font-medium">Assigned Class</th>
+                <th className="p-4 text-left font-medium">Mobile</th>
+                <th className="p-4 text-left font-medium">Location</th>
+                <th className="p-4 text-left font-medium">Experience</th>
                 <th className="p-4 text-center font-medium">Actions</th>
               </tr>
             </thead>
@@ -174,11 +139,12 @@ const ManageTeachers = () => {
                   } hover:bg-blue-50 transition-all duration-200`}
                 >
                   <td className="p-4 text-gray-700 font-medium">{t.name}</td>
-                  <td className="p-4 text-gray-600">{t.subject}</td>
+                  <td className="p-4 text-gray-600">{t.subjects?.join(", ") || "—"}</td>
                   <td className="p-4 text-gray-600">{t.email}</td>
-                  <td className="p-4 text-gray-600">{t.contact}</td>
+                  <td className="p-4 text-gray-600">{t.mobile || "—"}</td>
+                  <td className="p-4 text-gray-600">{t.location || "—"}</td>
                   <td className="p-4 text-gray-700 font-semibold">
-                    {t.assignedClass || "—"}
+                    {t.experience || 0} years
                   </td>
                   <td className="p-4 text-center space-x-2">
                     <button
@@ -193,12 +159,7 @@ const ManageTeachers = () => {
                     >
                       ✏️
                     </button>
-                    <button
-                      className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded shadow"
-                      onClick={() => openModal("assign", t)}
-                    >
-                      📚
-                    </button>
+
                     <button
                       className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded shadow"
                       onClick={() => openModal("delete", t)}
@@ -232,10 +193,112 @@ const ManageTeachers = () => {
               exit={{ scale: 0.8, opacity: 0 }}
               className="bg-white rounded-2xl shadow-2xl p-8 w-[420px]"
             >
-              {/* All modals same as before */}
-              {/* (No UI change done here) */}
-              {/* Your existing modal JSX remains exactly same */}
-              {/* ... */}
+              <h3 className="text-xl font-bold mb-4 text-gray-800">
+                {modalType === "add" && "➕ Add New Teacher"}
+                {modalType === "edit" && "✏️ Edit Teacher"}
+                {modalType === "view" && "👁️ View Teacher Details"}
+                {modalType === "delete" && "❌ Delete Teacher"}
+              </h3>
+
+              {(modalType === "add" || modalType === "edit") && (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Teacher Name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Mobile Number"
+                    value={formData.mobile}
+                    onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Experience (years)"
+                    value={formData.experience}
+                    onChange={(e) => setFormData({...formData, experience: parseInt(e.target.value) || 0})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Subjects (comma separated)"
+                    value={formData.subjects.join(", ")}
+                    onChange={(e) => setFormData({...formData, subjects: e.target.value.split(", ").filter(s => s.trim())})}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={handleSave}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
+                      {modalType === "add" ? "Add Teacher" : "Update Teacher"}
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {modalType === "view" && selectedTeacher && (
+                <div className="space-y-3">
+                  <p><strong>Name:</strong> {selectedTeacher.name}</p>
+                  <p><strong>Email:</strong> {selectedTeacher.email}</p>
+                  <p><strong>Mobile:</strong> {selectedTeacher.mobile || "Not provided"}</p>
+                  <p><strong>Location:</strong> {selectedTeacher.location || "Not provided"}</p>
+                  <p><strong>Experience:</strong> {selectedTeacher.experience || 0} years</p>
+                  <p><strong>Subjects:</strong> {selectedTeacher.subjects?.join(", ") || "None"}</p>
+                  <button
+                    onClick={closeModal}
+                    className="mt-4 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
+              {modalType === "delete" && selectedTeacher && (
+                <div>
+                  <p className="text-gray-700 mb-4">
+                    Are you sure you want to delete <strong>{selectedTeacher.name}</strong>?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
+                      Yes, Delete
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

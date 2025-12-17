@@ -6,12 +6,14 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useLoginMutation } from "../../Api/SchoolApi"; // ✅ RTK Query hook
 import { setCredentials } from "../../Api/authSlice"; // ✅ Redux action
+import { useAuth } from "../context/AuthProvider"; // ✅ Context hook
 
 const Login = ({ closeLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { login: contextLogin } = useAuth(); // ✅ Context login function
 
   const [login, { isLoading }] = useLoginMutation(); // ✅ RTK mutation hook
 
@@ -21,13 +23,22 @@ const Login = ({ closeLogin }) => {
       const data = await login({ email, password }).unwrap(); // ✅ auto API call
 
       if (data?.token) {
-        dispatch(setCredentials({ token: data.token, role: data.role })); // ✅ store me save
+        // ✅ Redux store mein save karo
+        dispatch(setCredentials({ token: data.token, role: data.role }));
+        
+        // ✅ Context mein bhi save karo (localStorage ke liye)
+        contextLogin({
+          token: data.token,
+          role: data.role,
+          email: data.email
+        });
+        
         toast.success("Login successful!", { autoClose: 1500 });
 
         setTimeout(() => {
           switch (data.role?.toLowerCase()) {
             case "admin":
-              navigate("/admin-dashboard");a
+              navigate("/admin-dashboard");
               break;
             case "teacher":
               navigate("/teacher-dashboard");

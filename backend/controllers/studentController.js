@@ -22,8 +22,7 @@ export const createStudent = async (req, res) => {
 // Get All Students
 export const getAllStudents = async (req, res) => {
     try {
-        const students = await Student.find()
-            .populate("homework examResults.exam leaveRequests");
+        const students = await Student.find().select("-password");
         res.status(200).json(students);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -33,8 +32,7 @@ export const getAllStudents = async (req, res) => {
 // Get Single Student by ID
 export const getStudentById = async (req, res) => {
     try {
-        const student = await Student.findById(req.params.id)
-            .populate("homework examResults.exam leaveRequests");
+        const student = await Student.findById(req.params.id).select("-password");
         if (!student) return res.status(404).json({ message: "Student not found" });
         res.status(200).json(student);
     } catch (error) {

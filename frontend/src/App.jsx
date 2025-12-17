@@ -35,7 +35,11 @@ const AppRoutes = () => {
       {/* Role-based dashboards without Navbar */}
       <Route
         path="/admin-dashboard"
-        element={<AdminDashboard />}
+        element={
+          <PrivateRoute roles={["admin"]}>
+            <AdminDashboard />
+          </PrivateRoute>
+        }
       />
       <Route
         path="/teacher-dashboard"
