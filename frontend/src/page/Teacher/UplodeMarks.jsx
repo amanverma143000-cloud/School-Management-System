@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
+import { motion } from "framer-motion";
 
-// Dummy subjects
 const subjects = ["MATHS", "SCIENCE", "ENGLISH", "SOCIAL-SCIENCE", "HINDI"];
 
 const MarksUpload = () => {
@@ -11,9 +10,8 @@ const MarksUpload = () => {
   const [activeStudent, setActiveStudent] = useState(null);
   const [activeSubject, setActiveSubject] = useState("");
   const [currentMark, setCurrentMark] = useState("");
-  const [examInfo, setExamInfo] = useState({}); // {totalMarks: 100}
+  const [examInfo, setExamInfo] = useState({});
 
-  // Dummy classes & students
   const classes = ["6th", "7th", "8th", "9th", "10th"];
   const dummyStudents = {
     "6th": [
@@ -26,12 +24,11 @@ const MarksUpload = () => {
     ]
   };
 
-  // Simulate fetching exam info from backend
   useEffect(() => {
     if (selectedClass) {
       setStudents(dummyStudents[selectedClass] || []);
-      setMarksData({}); // reset
-      setExamInfo({ totalMarks: 100 }); // Example: exam total marks
+      setMarksData({});
+      setExamInfo({ totalMarks: 100 });
     }
   }, [selectedClass]);
 
@@ -82,45 +79,51 @@ const MarksUpload = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-6"
+      className="min-h-screen p-6"
+      style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
     >
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
-        <h1 className="text-3xl font-bold text-blue-700 mb-6 text-center">Upload Student Marks</h1>
+      <div 
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="max-w-6xl mx-auto p-6 rounded-2xl border border-yellow-200"
+      >
+        <h1 className="text-3xl font-bold text-[var(--text-secondary)] mb-6 text-center">📊 Upload Student Marks</h1>
 
-        {/* Class dropdown */}
         <div className="mb-6">
           <label className="font-semibold mr-3">Select Class:</label>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border border-yellow-300 rounded px-3 py-2 bg-yellow-50"
           >
             <option value="">--Select Class--</option>
             {classes.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
-        {/* Student List */}
         {students.length > 0 && (
-          <table className="min-w-full border border-gray-200 rounded-xl mb-6">
-            <thead className="bg-blue-50">
+          <table className="min-w-full border border-yellow-200 rounded-xl mb-6">
+            <thead className="bg-yellow-50">
               <tr>
-                <th className="px-4 py-2 border">Student Name</th>
-                <th className="px-4 py-2 border text-center">Status</th>
-                <th className="px-4 py-2 border text-center">Action</th>
+                <th className="px-4 py-2 border border-yellow-200">Student Name</th>
+                <th className="px-4 py-2 border border-yellow-200 text-center">Status</th>
+                <th className="px-4 py-2 border border-yellow-200 text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {students.map(student => (
-                <tr key={student.id} className="hover:bg-blue-50">
-                  <td className="px-4 py-2 border">{student.name}</td>
-                  <td className="px-4 py-2 border text-center">
+                <tr key={student.id} className="hover:bg-yellow-50">
+                  <td className="px-4 py-2 border border-yellow-200">{student.name}</td>
+                  <td className="px-4 py-2 border border-yellow-200 text-center">
                     {marksData[student.id] ? "Uploaded" : "Pending"}
                   </td>
-                  <td className="px-4 py-2 border text-center">
+                  <td className="px-4 py-2 border border-yellow-200 text-center">
                     <button
                       onClick={() => handleOpenMarks(student)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-xl"
+                      style={{ backgroundColor: "var(--primary-color)" }}
+                      className="hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded-xl"
                     >
                       {marksData[student.id] ? "View / Edit" : "Upload Marks"}
                     </button>
@@ -131,9 +134,8 @@ const MarksUpload = () => {
           </table>
         )}
 
-        {/* Marks Entry Section */}
         {activeStudent && (
-          <div className="bg-gray-50 p-4 rounded-xl mb-6">
+          <div className="bg-yellow-50 p-4 rounded-xl mb-6 border border-yellow-200">
             <h2 className="font-semibold text-gray-700 mb-3">Marks for: {activeStudent.name}</h2>
 
             <p className="mb-2 text-gray-600">Total marks for exam: {examInfo.totalMarks}</p>
@@ -147,7 +149,7 @@ const MarksUpload = () => {
                     value={sub}
                     checked={activeSubject === sub}
                     onChange={() => setActiveSubject(sub)}
-                    className="mr-1"
+                    className="mr-1 accent-yellow-600"
                   />
                   {sub}
                 </label>
@@ -161,7 +163,7 @@ const MarksUpload = () => {
                   placeholder={`Enter marks for ${activeSubject}`}
                   value={currentMark}
                   onChange={(e) => setCurrentMark(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 w-32"
+                  className="border border-yellow-300 rounded px-3 py-2 w-32 bg-yellow-50"
                 />
                 <button
                   onClick={handleSaveSubjectMark}
@@ -180,7 +182,7 @@ const MarksUpload = () => {
                     <li key={subject} className="flex justify-between items-center">
                       {subject}: {mark}
                       <div className="flex gap-2">
-                        <button onClick={() => handleEditMark(activeStudent.id, subject)} className="text-blue-600">Edit</button>
+                        <button onClick={() => handleEditMark(activeStudent.id, subject)} className="text-yellow-600">Edit</button>
                         <button onClick={() => handleRemoveMark(activeStudent.id, subject)} className="text-red-600">Remove</button>
                       </div>
                     </li>
@@ -191,23 +193,22 @@ const MarksUpload = () => {
           </div>
         )}
 
-        {/* Preview Table */}
         {Object.keys(marksData).length > 0 && (
           <div className="mb-6">
             <h2 className="font-semibold text-gray-700 mb-3">Preview Marks</h2>
-            <table className="min-w-full border border-gray-200 rounded-xl overflow-hidden">
-              <thead className="bg-blue-50">
+            <table className="min-w-full border border-yellow-200 rounded-xl overflow-hidden">
+              <thead className="bg-yellow-50">
                 <tr>
-                  <th className="px-4 py-2 border">Student</th>
-                  {subjects.map(sub => <th key={sub} className="px-4 py-2 border">{sub}</th>)}
+                  <th className="px-4 py-2 border border-yellow-200">Student</th>
+                  {subjects.map(sub => <th key={sub} className="px-4 py-2 border border-yellow-200">{sub}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {students.map(s => (
-                  <tr key={s.id} className="hover:bg-blue-50">
-                    <td className="px-4 py-2 border">{s.name}</td>
+                  <tr key={s.id} className="hover:bg-yellow-50">
+                    <td className="px-4 py-2 border border-yellow-200">{s.name}</td>
                     {subjects.map(sub => (
-                      <td key={sub} className="px-4 py-2 border text-center">
+                      <td key={sub} className="px-4 py-2 border border-yellow-200 text-center">
                         {marksData[s.id]?.[sub] || "-"}
                       </td>
                     ))}
@@ -218,7 +219,6 @@ const MarksUpload = () => {
           </div>
         )}
 
-        {/* Upload All Button */}
         {Object.keys(marksData).length > 0 && (
           <div className="flex justify-end">
             <button

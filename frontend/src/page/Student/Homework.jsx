@@ -36,20 +36,26 @@ const Homework = () => {
 
   return (
     <div className="relative p-4 font-sans">
-      <h2 className="text-xl sm:text-2xl font-extrabold mb-6 text-yellow-700">
+      <h2 className="text-xl sm:text-2xl font-extrabold mb-6 text-[var(--text-secondary)]">
         📚 Homework Assignments
       </h2>
 
-      {/* ✅ PC / Tablet Table */}
-      <div className="hidden sm:block bg-white shadow-lg rounded-xl border border-yellow-200 overflow-hidden">
+      {/* PC / Tablet Table */}
+      <div 
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="hidden sm:block rounded-xl border border-yellow-200 overflow-hidden"
+      >
         <table className="w-full text-sm text-gray-700">
-          <thead className="bg-yellow-600 text-white uppercase text-xs">
+          <thead className="bg-yellow-50 text-gray-800 uppercase text-xs">
             <tr>
-              <th className="px-4 py-3">Subject</th>
-              <th className="px-4 py-3">Teacher</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3 text-center">File</th>
-              <th className="px-4 py-3 text-center">Action</th>
+              <th className="px-4 py-3 border border-yellow-200">Subject</th>
+              <th className="px-4 py-3 border border-yellow-200">Teacher</th>
+              <th className="px-4 py-3 border border-yellow-200">Date</th>
+              <th className="px-4 py-3 text-center border border-yellow-200">File</th>
+              <th className="px-4 py-3 text-center border border-yellow-200">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -60,10 +66,10 @@ const Homework = () => {
                 transition={{ duration: 0.2 }}
                 className="border-b border-yellow-200"
               >
-                <td className="px-4 py-3 font-medium">{hw.subject}</td>
-                <td className="px-4 py-3">{hw.teacher}</td>
-                <td className="px-4 py-3">{hw.date}</td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 font-medium border border-yellow-200">{hw.subject}</td>
+                <td className="px-4 py-3 border border-yellow-200">{hw.teacher}</td>
+                <td className="px-4 py-3 border border-yellow-200">{hw.date}</td>
+                <td className="px-4 py-3 text-center border border-yellow-200">
                   <a
                     href={hw.file}
                     download
@@ -72,10 +78,11 @@ const Homework = () => {
                     <FileDown size={18} /> Download
                   </a>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 text-center border border-yellow-200">
                   <button
                     onClick={() => setSelectedHomework(hw)}
-                    className="bg-yellow-600 text-white px-4 py-1.5 rounded-md hover:bg-yellow-700"
+                    style={{ backgroundColor: "var(--primary-color)" }}
+                    className="text-gray-800 px-4 py-1.5 rounded-md hover:bg-yellow-500"
                   >
                     View
                   </button>
@@ -86,19 +93,23 @@ const Homework = () => {
         </table>
       </div>
 
-      {/* ✅ Mobile Card Layout */}
+      {/* Mobile Card Layout */}
       <div className="sm:hidden flex flex-col gap-4">
         {homeworkData.map((hw) => (
           <motion.div
             key={hw.id}
-            className="bg-white border border-yellow-200 rounded-xl shadow-md p-4"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+            }}
+            className="border border-yellow-200 rounded-xl p-4"
             whileTap={{ scale: 0.97 }}
           >
             <div className="font-bold text-lg text-yellow-700 flex items-center gap-2">
               <BookOpen size={20} /> {hw.subject}
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              👨‍🏫 {hw.teacher}
+              👨🏫 {hw.teacher}
             </p>
             <p className="text-sm text-gray-600">
               📅 {hw.date}
@@ -123,7 +134,7 @@ const Homework = () => {
         ))}
       </div>
 
-      {/* ✅ Modal */}
+      {/* Modal */}
       <AnimatePresence>
         {selectedHomework && (
           <motion.div
@@ -134,7 +145,11 @@ const Homework = () => {
             onClick={() => setSelectedHomework(null)}
           >
             <motion.div
-              className="bg-white w-full max-w-sm sm:max-w-md rounded-2xl shadow-2xl p-6 border border-yellow-400 relative"
+              style={{
+                backgroundColor: "var(--card-bg)",
+                boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+              }}
+              className="w-full max-w-sm sm:max-w-md rounded-2xl p-6 border border-yellow-400 relative"
               onClick={(e) => e.stopPropagation()}
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -150,7 +165,8 @@ const Homework = () => {
               <a
                 href={selectedHomework.file}
                 download
-                className="block mt-4 w-full text-center bg-yellow-600 text-white py-2 rounded-lg"
+                style={{ backgroundColor: "var(--primary-color)" }}
+                className="block mt-4 w-full text-center text-gray-800 py-2 rounded-lg"
               >
                 📎 Download File
               </a>

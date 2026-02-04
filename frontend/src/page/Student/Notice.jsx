@@ -43,8 +43,10 @@ const Announcements = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-100 p-6">
-
+    <div 
+      className="min-h-screen p-6"
+      style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
+    >
       {/* Header */}
       <motion.div
         className="flex items-center justify-center gap-3 mb-8"
@@ -52,7 +54,7 @@ const Announcements = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         <Megaphone className="text-yellow-600 w-9 h-9" />
-        <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 drop-shadow-md">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-[var(--text-secondary)] drop-shadow-md">
           📢 Announcements
         </h1>
       </motion.div>
@@ -66,7 +68,11 @@ const Announcements = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             whileHover={{ scale: 1.03 }}
-            className="bg-white rounded-2xl shadow-lg border border-yellow-200 overflow-hidden cursor-pointer hover:shadow-2xl transition-all"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+            }}
+            className="rounded-2xl border border-yellow-200 overflow-hidden cursor-pointer hover:shadow-[-8px_6px_16px_rgba(0,0,0,0.35)] transition-all"
             onClick={() => setSelected(notice)}
           >
             <div className="relative">
@@ -105,7 +111,11 @@ const Announcements = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-yellow-200"
+              style={{
+                backgroundColor: "var(--card-bg)",
+                boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+              }}
+              className="rounded-2xl max-w-2xl w-full overflow-hidden border border-yellow-200"
               initial={{ scale: 0.95, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 30 }}
@@ -118,7 +128,8 @@ const Announcements = () => {
                 />
                 <button
                   onClick={() => setSelected(null)}
-                  className="absolute top-3 right-3 bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-full shadow"
+                  style={{ backgroundColor: "var(--primary-color)" }}
+                  className="absolute top-3 right-3 hover:bg-yellow-500 text-gray-800 p-2 rounded-full shadow"
                 >
                   <X size={18} />
                 </button>

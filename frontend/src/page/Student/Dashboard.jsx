@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthProvider";
 import {
   FaBook,
   FaClipboardList,
@@ -8,8 +9,13 @@ import {
   FaCalendarAlt,
   FaGraduationCap,
   FaRegCalendarCheck,
+  FaUserCircle,
+  FaChartLine,
+  FaTasks,
+  FaCalendarCheck
 } from "react-icons/fa";
 import { FiLogOut, FiMenu } from "react-icons/fi";
+import { MdAssessment } from "react-icons/md";
 import Student_img from "../../assets/student.jpg";
 
 import Dashboard from "./Dashbaord";
@@ -20,19 +26,28 @@ import Exam from "./Timetable";
 import Result from "./Result";
 import Leave from "./Leave";
 
-export default function StudentDashboard({ user, setUser }) {
+export default function StudentDashboard() {
   const [active, setActive] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profilePic, setProfilePic] = useState(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  // Redirect if not authenticated or not student
+  useEffect(() => {
+    if (!user || user.role?.toLowerCase() !== 'student') {
+      navigate('/login');
+    }
+  }, [user, navigate]);
 
   const handleLogout = () => {
-    if (setUser) setUser(null);
+    logout();
     navigate("/");
   };
 
   const menuItems = [
-    { name: "Dashboard", icon: <FaGraduationCap /> },
+    { name: "Dashboard", icon: <MdAssessment /> },
     { name: "Today's Homework", icon: <FaBook /> },
     { name: "Attendance Report", icon: <FaClipboardList /> },
     { name: "View Notice", icon: <FaBullhorn /> },
@@ -41,9 +56,109 @@ export default function StudentDashboard({ user, setUser }) {
     { name: "Request for Leave", icon: <FaRegCalendarCheck /> },
   ];
 
+  // Mock data for dashboard stats
+  const dashboardStats = [
+    { title: "Attendance", value: "92%", icon: <FaCalendarCheck />, color: "text-green-600" },
+    { title: "Pending Homework", value: "5", icon: <FaTasks />, color: "text-orange-600" },
+    { title: "Overall Grade", value: "A", icon: <FaChartLine />, color: "text-blue-600" },
+    { title: "Upcoming Exams", value: "3", icon: <FaGraduationCap />, color: "text-purple-600" },
+  ];
+
   const renderContent = () => {
     switch (active) {
-      case "Dashboard": return <Dashboard />;
+      case "Dashboard": return (
+        <>
+          <h2 className="text-2xl font-bold mb-6 text-[var(--text-secondary)]">
+            📚 Student Dashboard
+          </h2>
+
+          {/* Dashboard Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {dashboardStats.map((stat, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ scale: 1.05 }}
+                style={{
+                  backgroundColor: "var(--card-bg)",
+                  boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+                }}
+                className="p-5 rounded-2xl hover:shadow-[-8px_6px_16px_rgba(0,0,0,0.35)] transition duration-300"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-gray-700">{stat.title}</h3>
+                    <p className="text-3xl font-bold text-[var(--text-secondary)] mt-2">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <div className={`text-4xl ${stat.color}`}>
+                    {stat.icon}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Quick Info Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+            <motion.div
+              className="p-6 rounded-2xl shadow-sm"
+              style={{
+                backgroundColor: "var(--background-color)",
+                boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+              }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                📝 Recent Homework
+              </h3>
+              <div className="space-y-3">
+                {["Math - Algebra Problems", "English - Essay Writing", "Science - Lab Report"].map((homework, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-800">{homework}</p>
+                      <p className="text-sm text-gray-600">Due: Tomorrow</p>
+                    </div>
+                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">
+                      Pending
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="p-6 rounded-2xl shadow-sm"
+              style={{
+                backgroundColor: "var(--background-color)",
+                boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
+              }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
+                📅 Upcoming Exams
+              </h3>
+              <div className="space-y-3">
+                {["Mathematics - Unit Test", "Physics - Mid Term", "Chemistry - Lab Exam"].map((exam, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-800">{exam}</p>
+                      <p className="text-sm text-gray-600">Next week</p>
+                    </div>
+                    <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded">
+                      Upcoming
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </>
+      );
       case "Today's Homework": return <Homework />;
       case "Attendance Report": return <Attendance />;
       case "View Notice": return <Notice />;
@@ -55,53 +170,78 @@ export default function StudentDashboard({ user, setUser }) {
   };
 
   return (
-    <div className="flex full-h-screen bg-yellow-50">
-      
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-gradient-to-br from-[#fffdf3] via-[#fffbea] to-[#fff6d9]">
+      {/* ===== Sidebar ===== */}
       <motion.aside
-        animate={{ width: isSidebarOpen ? 240 : 80 }}
-        className={`bg-yellow-600 text-white p-4 flex flex-col shadow-xl fixed md:static z-50 h-full 
-          ${mobileMenu ? "left-0" : "-left-64"} md:left-0 transition-all duration-1`}
+        animate={{
+          width: isSidebarOpen ? 240 : 80,
+          boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
+        }}
+        transition={{ duration: 0.4 }}
+        style={{
+          backgroundColor: "var(--sidebar-bg)",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          bottom: 0,
+          overflowY: "auto",
+        }}
+        className="text-gray-900 p-4 flex flex-col border-r border-yellow-200"
       >
         <div className="flex items-center justify-between mb-6">
-          {isSidebarOpen && <h1 className="text-lg font-bold">Student Panel</h1>}
+          {isSidebarOpen && (
+            <h1 className="text-xl font-bold text-gray-800 drop-shadow-sm">
+              🎓 Student Panel
+            </h1>
+          )}
           <button
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setMobileMenu(false);
-              } else {
-                setIsSidebarOpen(!isSidebarOpen);
-              }
-            }}
-            className="text-yellow-200 hover:text-white"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="text-gray-700 hover:text-gray-900 transition"
           >
             <FiMenu size={22} />
           </button>
         </div>
 
-        {/* Profile */}
-        <div className="flex flex-col items-center mb-5">
-          <img src={Student_img} className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
-          {isSidebarOpen && (
-            <>
-              <h2 className="text-sm font-semibold mt-2">{user?.email || "student@example.com"}</h2>
-              <p className="text-yellow-100 text-xs">{user?.role || "Student"}</p>
-            </>
-          )}
-        </div>
+        {/* Student Profile Section */}
+        {isSidebarOpen && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl">
+            <div className="flex flex-col items-center">
+              {profilePic ? (
+                <img
+                  src={profilePic}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full border-2 border-yellow-300 object-cover mb-2"
+                />
+              ) : (
+                <img 
+                  src={Student_img} 
+                  alt="Student" 
+                  className="w-16 h-16 rounded-full border-2 border-yellow-300 object-cover mb-2"
+                />
+              )}
+              <h3 className="font-semibold text-gray-800">{user?.name || "Student"}</h3>
+              <p className="text-sm text-gray-600">{user?.email}</p>
+              <p className="text-xs text-gray-500 mt-1">Class 10th A</p>
+            </div>
+          </div>
+        )}
 
-        {/* Menu */}
+        {/* Sidebar Menu */}
         <nav className="space-y-2">
-          {menuItems.map((item) => (
+          {menuItems.map((item, index) => (
             <motion.div
-              key={item.name}
-              whileHover={{ scale: 1.03 }}
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer
-                ${active === item.name ? "bg-white text-yellow-700 font-semibold" : "text-yellow-50 hover:bg-yellow-500"}`}
-              onClick={() => {
-                setActive(item.name);
-                setMobileMenu(false);
+              key={index}
+              whileHover={{ scale: 1.05 }}
+              style={{
+                backgroundColor:
+                  active === item.name ? "var(--sidebar-active)" : "transparent",
               }}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                active === item.name
+                  ? "text-gray-900 font-semibold"
+                  : "hover:bg-[var(--sidebar-hover)] text-gray-800"
+              }`}
+              onClick={() => setActive(item.name)}
             >
               <span className="text-lg">{item.icon}</span>
               {isSidebarOpen && <span className="text-sm">{item.name}</span>}
@@ -110,30 +250,158 @@ export default function StudentDashboard({ user, setUser }) {
         </nav>
       </motion.aside>
 
-      {/* Main Content */}
-      <div className="flex-1 md:ml-0 ml-0 flex flex-col">
-        
-        {/* Header */}
-        <header className="bg-yellow-700 text-white flex justify-between items-center px-4 md:px-6 py-4 shadow-lg">
-          <button className="md:hidden text-2xl" onClick={() => setMobileMenu(true)}>
-            <FiMenu />
-          </button>
-
-          <h2 className="text-md md:text-lg font-bold">
+      {/* ===== Main Content ===== */}
+      <div
+        className="flex-1 flex flex-col"
+        style={{
+          marginLeft: isSidebarOpen ? 240 : 80,
+          transition: "margin-left 0.4s ease",
+        }}
+      >
+        {/* Navbar */}
+        <header
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 50,
+            backgroundColor: "var(--background-color)",
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
+            borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+          }}
+          className="text-gray-900 flex justify-between items-center px-6 py-4 backdrop-blur-md"
+        >
+          <h2 className="text-lg font-semibold tracking-wide">
             Welcome, {user?.name || "Student"} 👋
           </h2>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            onClick={handleLogout}
-            className="bg-white text-yellow-700 font-semibold px-3 md:px-4 py-2 rounded-xl shadow-md text-sm md:text-base"
-          >
-            <FiLogOut className="inline mr-1" /> Logout
-          </motion.button>
+          {/* Profile + Logout Buttons */}
+          <div className="flex items-center gap-4">
+            {/* Profile Icon */}
+            <div
+              onClick={() => setShowProfile(true)}
+              className="cursor-pointer relative group"
+            >
+              {profilePic ? (
+                <img
+                  src={profilePic}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full border-2 border-gray-400 object-cover"
+                />
+              ) : (
+                <FaUserCircle
+                  size={38}
+                  className="text-gray-600 hover:text-gray-800 transition"
+                />
+              )}
+            </div>
+
+            {/* Logout */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={handleLogout}
+              style={{
+                backgroundColor: "var(--primary-color)",
+                color: "var(--button-text)",
+                boxShadow: "0 3px 6px rgba(0,0,0,0.2)",
+              }}
+              className="font-semibold px-4 py-2 rounded-xl transition"
+            >
+              <FiLogOut className="inline mr-1" /> Logout
+            </motion.button>
+          </div>
         </header>
 
-        <main className="p-4 md:p-6 overflow-y-auto">{renderContent()}</main>
+        {/* ===== Dashboard Body ===== */}
+        <motion.main
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="p-8 flex-1 overflow-y-auto"
+          style={{
+            background:
+              "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)",
+          }}
+        >
+          {renderContent()}
+        </motion.main>
       </div>
+
+      {/* ===== Profile Modal ===== */}
+      {showProfile && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white p-6 rounded-2xl shadow-xl w-[400px]"
+          >
+            <h2 className="text-xl font-bold mb-4 text-gray-800">
+              👤 Profile Details
+            </h2>
+
+            {/* Profile Picture */}
+            <div className="flex flex-col items-center mb-4">
+              {profilePic ? (
+                <img
+                  src={profilePic}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full border border-gray-300 object-cover mb-2"
+                />
+              ) : (
+                <img 
+                  src={Student_img} 
+                  alt="Student" 
+                  className="w-24 h-24 rounded-full border border-gray-300 object-cover mb-2"
+                />
+              )}
+
+              <label className="cursor-pointer text-blue-500 text-sm font-medium hover:underline">
+                Upload Picture
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setProfilePic(url);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Details */}
+            <div className="text-gray-700 space-y-2">
+              <p><strong>Name:</strong> {user?.name || "Student"}</p>
+              <p><strong>Email:</strong> {user?.email || "Not available"}</p>
+              <p><strong>Role:</strong> {user?.role || "Student"}</p>
+              <p><strong>Class:</strong> 10th A</p>
+              <p><strong>Roll Number:</strong> 2024001</p>
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => setShowProfile(false)}
+                className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  alert("Profile Updated Successfully!");
+                  setShowProfile(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition"
+              >
+                Save
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

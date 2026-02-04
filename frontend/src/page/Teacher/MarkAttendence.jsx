@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
+import { motion } from "framer-motion";
 
 const MarkAttendance = () => {
   const [selectedClass, setSelectedClass] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Dummy students data
   const allStudents = {
     "1": [
       { id: 1, name: "Rohan Kumar" },
@@ -16,7 +15,6 @@ const MarkAttendance = () => {
       { id: 3, name: "Aman Verma" },
       { id: 4, name: "Sanya Gupta" },
     ],
-    // Add more classes as needed
   };
 
   useEffect(() => {
@@ -59,20 +57,26 @@ const MarkAttendance = () => {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6"
+      className="min-h-screen p-6"
+      style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
     >
-      <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-          Mark Attendance
+      <div 
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="max-w-6xl mx-auto rounded-3xl border border-yellow-200 p-8"
+      >
+        <h1 className="text-3xl font-bold text-[var(--text-secondary)] mb-6 text-center">
+          📋 Mark Attendance
         </h1>
 
-        {/* Class Select */}
         <div className="flex justify-center mb-8">
           <label className="font-semibold text-gray-700 mr-4 self-center">
             Select Class:
           </label>
           <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+            className="border border-yellow-300 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-yellow-50"
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
           >
@@ -89,48 +93,47 @@ const MarkAttendance = () => {
           <p className="text-center text-gray-500 mb-4">Loading students...</p>
         )}
 
-        {/* Students Table */}
         {students.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 rounded-xl shadow-lg bg-white">
-              <thead className="bg-green-50">
+            <table className="min-w-full divide-y divide-yellow-200 rounded-xl shadow-lg border border-yellow-200">
+              <thead className="bg-yellow-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-left text-gray-700 font-medium border border-yellow-200">
                     Student Name
                   </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-center text-gray-700 font-medium border border-yellow-200">
                     Class
                   </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-center text-gray-700 font-medium border border-yellow-200">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-center text-gray-700 font-medium border border-yellow-200">
                     P
                   </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-center text-gray-700 font-medium border border-yellow-200">
                     A
                   </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
+                  <th className="px-6 py-3 text-center text-gray-700 font-medium border border-yellow-200">
                     L
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white divide-y divide-yellow-100">
                 {students.map((stu) => (
                   <tr
                     key={stu.id}
-                    className="hover:bg-green-50 transition duration-200"
+                    className="hover:bg-yellow-50 transition duration-200"
                   >
-                    <td className="px-6 py-4 text-gray-800 font-medium">
+                    <td className="px-6 py-4 text-gray-800 font-medium border border-yellow-200">
                       {stu.name}
                     </td>
-                    <td className="px-6 py-4 text-center text-gray-700">
+                    <td className="px-6 py-4 text-center text-gray-700 border border-yellow-200">
                       {selectedClass}
                     </td>
-                    <td className="px-6 py-4 text-center text-gray-700">
+                    <td className="px-6 py-4 text-center text-gray-700 border border-yellow-200">
                       {new Date().toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center border border-yellow-200">
                       <button
                         onClick={() => handleAttendanceChange(stu.id, "P")}
                         className={`px-3 py-1 rounded-full font-semibold transition ${
@@ -142,7 +145,7 @@ const MarkAttendance = () => {
                         P
                       </button>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center border border-yellow-200">
                       <button
                         onClick={() => handleAttendanceChange(stu.id, "A")}
                         className={`px-3 py-1 rounded-full font-semibold transition ${
@@ -154,7 +157,7 @@ const MarkAttendance = () => {
                         A
                       </button>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center border border-yellow-200">
                       <button
                         onClick={() => handleAttendanceChange(stu.id, "L")}
                         className={`px-3 py-1 rounded-full font-semibold transition ${
@@ -173,7 +176,6 @@ const MarkAttendance = () => {
           </div>
         )}
 
-        {/* Buttons */}
         {students.length > 0 && (
           <div className="flex justify-end gap-4 mt-8">
             <button

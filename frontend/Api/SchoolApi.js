@@ -167,7 +167,7 @@ export const schoolApi = createApi({
     }),
 
     getNotices: builder.query({
-      query: () => "/admin/notices",
+      query: () => "/admin/notices/notice/all",
       providesTags: ["Notice"]
     }),
 
