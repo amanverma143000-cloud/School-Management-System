@@ -1,24 +1,38 @@
-import React, { useState } from "react";
-import { useGetStudentLeavesQuery } from "../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { leaveAPI } from "../../services/api";
 
 const LeaveManagement = () => {
-  // ✅ सभी hooks सबसे ऊपर
-  const { data: apiLeaves = [], isLoading } = useGetStudentLeavesQuery();
-  const [filter, setFilter] = useState("All"); // ✅ यहाँ move किया
+  const [isLoading, setIsLoading] = useState(true);
+  const [leaves, setLeaves] = useState([]);
+  const [filter, setFilter] = useState("All");
 
-  // Transform API data - conditional check के साथ
-  const leaves = isLoading ? [] : apiLeaves.map(leave => ({
-    id: leave._id,
-    studentName: leave.requester?.name + " " + leave.requester?.lastname || "Unknown Student",
-    class: leave.requester?.class + " - " + leave.requester?.section || "Unknown Class",
-    from: new Date(leave.fromDate).toLocaleDateString(),
-    to: new Date(leave.toDate).toLocaleDateString(),
-    reason: leave.reason,
-    status: leave.status,
-    teacher: leave.teacher?.name || "Unknown Teacher",
-  }));
+  const fetchLeaves = async () => {
+    try {
+      setIsLoading(true);
+      const response = await leaveAPI.getAllLeaves();
+      const apiLeaves = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      setLeaves(apiLeaves.map(leave => ({
+        id: leave._id,
+        studentName: leave.requester?.name + " " + leave.requester?.lastname || "Unknown Student",
+        class: leave.requester?.class + " - " + leave.requester?.section || "Unknown Class",
+        from: new Date(leave.fromDate).toLocaleDateString(),
+        to: new Date(leave.toDate).toLocaleDateString(),
+        reason: leave.reason,
+        status: leave.status,
+        teacher: leave.teacher?.name || "Unknown Teacher",
+      })));
+    } catch (err) {
+      console.error("Error fetching leaves:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
   
-  // ✅ Loading check hooks के बाद
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

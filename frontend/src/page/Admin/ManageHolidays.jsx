@@ -1,12 +1,11 @@
-import React, { useState } from "react";
-import { useGetHolidaysQuery, useAddHolidayMutation, useDeleteHolidayMutation } from "../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { holidayAPI } from "../../../services/api";
+import { toast } from "react-toastify";
 import { FaCalendarAlt, FaPlus, FaTrash } from "react-icons/fa";
 
 const ManageHolidays = () => {
-  const { data: holidays = [], isLoading, refetch } = useGetHolidaysQuery();
-  const [addHoliday] = useAddHolidayMutation();
-  const [deleteHoliday] = useDeleteHolidayMutation();
-  
+  const [holidays, setHolidays] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -15,25 +14,44 @@ const ManageHolidays = () => {
     type: "School"
   });
 
+  const fetchHolidays = async () => {
+    try {
+      setIsLoading(true);
+      const data = await holidayAPI.getAllHolidays();
+      setHolidays(data.data || data || []);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+      toast.error('Failed to fetch holidays');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHolidays();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addHoliday(formData);
+      await holidayAPI.createHoliday(formData);
       setFormData({ name: "", date: "", description: "", type: "School" });
       setShowForm(false);
-      refetch();
+      fetchHolidays();
+      toast.success('Holiday added successfully');
     } catch (error) {
-      alert("Failed to add holiday");
+      toast.error("Failed to add holiday");
     }
   };
 
   const handleDelete = async (id, name) => {
     if (window.confirm(`Delete ${name}?`)) {
       try {
-        await deleteHoliday(id);
-        refetch();
+        await holidayAPI.deleteHoliday(id);
+        fetchHolidays();
+        toast.success('Holiday deleted successfully');
       } catch (error) {
-        alert("Failed to delete holiday");
+        toast.error("Failed to delete holiday");
       }
     }
   };

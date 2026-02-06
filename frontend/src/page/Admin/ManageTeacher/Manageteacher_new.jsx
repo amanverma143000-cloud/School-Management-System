@@ -1,15 +1,19 @@
 /* eslint-disable no-unused-vars */
+// React aur hooks import kar rahe hain
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { teacherAPI } from "../../../services/api";
+// Animation library import kar rahe hain
+import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
+// Toast notifications ke liye
 import { toast } from "react-toastify";
+// Axios-based API service
+import { teacherAPI } from "../../../services/api";
 
 const ManageTeachers = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [teachers, setTeachers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,16 +24,17 @@ const ManageTeachers = () => {
     subjects: [],
   });
 
+  // Fetch teachers data
   const fetchTeachers = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const data = await teacherAPI.getAllTeachers();
       setTeachers(data.data || data || []);
     } catch (error) {
       console.error('Error fetching teachers:', error);
       toast.error('Failed to fetch teachers');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -37,7 +42,7 @@ const ManageTeachers = () => {
     fetchTeachers();
   }, []);
 
-  // Open / Close Modal
+  // OPEN / CLOSE MODAL
   const openModal = (type, teacher = null) => {
     setModalType(type);
     setSelectedTeacher(teacher);
@@ -71,7 +76,7 @@ const ManageTeachers = () => {
     setModalType("");
   };
 
-  // Add / Edit / Delete APIs using axios
+  // ADD / EDIT / DELETE APIs using axios
   const handleSave = async () => {
     try {
       if (modalType === "add") {
@@ -81,11 +86,11 @@ const ManageTeachers = () => {
         await teacherAPI.updateTeacher(selectedTeacher._id, formData);
         toast.success("Teacher updated successfully!");
       }
-      fetchTeachers();
+      fetchTeachers(); // Refresh data
       closeModal();
     } catch (err) {
       console.error("Error saving teacher:", err);
-      toast.error("Error saving teacher");
+      toast.error(err.message || "Error saving teacher");
     }
   };
 
@@ -94,7 +99,7 @@ const ManageTeachers = () => {
     try {
       await teacherAPI.deleteTeacher(selectedTeacher._id);
       toast.success("Teacher deleted successfully!");
-      fetchTeachers();
+      fetchTeachers(); // Refresh data
       closeModal();
     } catch (err) {
       console.error("Error deleting teacher:", err);
@@ -102,13 +107,20 @@ const ManageTeachers = () => {
     }
   };
 
-  // UI Part
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-gray-600">⏳ Loading teachers...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8  min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
-          👨‍🏫 Manage Teachers
+          👨🏫 Manage Teachers
         </h2>
         <button
           onClick={() => openModal("add")}
@@ -124,9 +136,7 @@ const ManageTeachers = () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200"
       >
-        {isLoading ? (
-          <p className="text-center text-gray-500 p-6">⏳ Loading teachers...</p>
-        ) : teachers.length > 0 ? (
+        {teachers.length > 0 ? (
           <table className="min-w-full border-collapse">
             <thead style={{background:"var(--gradient-yellow)"}}>
               <tr>
@@ -187,7 +197,7 @@ const ManageTeachers = () => {
         )}
       </motion.div>
 
-      {/* Modal section - unchanged */}
+      {/* Modal section */}
       <AnimatePresence>
         {showModal && (
           <motion.div

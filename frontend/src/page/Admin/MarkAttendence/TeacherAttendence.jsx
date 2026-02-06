@@ -1,10 +1,24 @@
-// 📁 src/components/Attendance/TeacherAttendance.jsx
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion"; // eslint-disable-line
-import { useGetTeachersQuery } from "../../../../Api/SchoolApi";
+import { motion } from "framer-motion";
+import { teacherAPI } from "../../../services/api";
 
 export default function TeacherAttendance({ goBack }) {
-  const { data: teachersData = [], isLoading } = useGetTeachersQuery();
+  const [teachersData, setTeachersData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const data = await teacherAPI.getAllTeachers();
+        setTeachersData(data.data || data || []);
+      } catch (error) {
+        console.error('Error fetching teachers:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTeachers();
+  }, []);
   
   const teachers = teachersData.map(teacher => ({
     id: teacher._id,

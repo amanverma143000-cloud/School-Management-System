@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
-import { useGetStudentsQuery } from "../../../../Api/SchoolApi";
+import { motion } from "framer-motion";
+import { studentAPI } from "../../../services/api";
 
 export default function StudentAttendance({ goBack }) {
-  const { data: allStudents = [], isLoading } = useGetStudentsQuery();
+  const [allStudents, setAllStudents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await studentAPI.getAllStudents();
+        setAllStudents(data.data || data || []);
+      } catch (error) {
+        console.error('Error fetching students:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
   
   // Group students by class and section
   const studentsData = allStudents.reduce((acc, student) => {

@@ -1,292 +1,334 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGetAdminClassesQuery, useAddAdminClassMutation, useDeleteAdminClassMutation, useGetTeachersQuery } from "../../../../Api/SchoolApi";
-import { FaSchool, FaPlus, FaEye, FaEdit, FaTrash, FaUser, FaBook, FaClock } from "react-icons/fa";
+import { classAPI, teacherAPI } from "../../../services/api";
+import { toast } from "react-toastify";
+import {
+  FaSchool,
+  FaPlus,
+  FaTrash,
+  FaEdit,
+  FaTimes,
+  FaUser,
+  FaBook
+} from "react-icons/fa";
 
 const ManageClasses = () => {
-  const { data: apiClasses = [], isLoading, refetch } = useGetAdminClassesQuery();
-  const { data: teachers = [] } = useGetTeachersQuery();
-  const [addClassMutation] = useAddAdminClassMutation();
-  const [deleteClassMutation] = useDeleteAdminClassMutation();
-  
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [teachers, setTeachers] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingClassId, setEditingClassId] = useState(null);
   const [formData, setFormData] = useState({
-    name: "",
+    className: "",
     section: "",
     classTeacher: "",
-    subjects: "",
-    capacity: 40,
-    startTime: "09:00",
-    endTime: "15:00"
+    subjects: ""
   });
 
-  const classNames = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
-  const sections = ["A", "B", "C", "D", "E"];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <div className="ml-4 text-xl text-gray-600">Loading classes...</div>
-      </div>
-    );
-  }
-
-  const handleAddClass = async (e) => {
-    e.preventDefault();
+  const fetchData = async () => {
     try {
-      await addClassMutation({
-        ...formData,
-        subjects: formData.subjects.split(",").map(s => s.trim()),
-        schedule: {
-          startTime: formData.startTime,
-          endTime: formData.endTime
-        }
-      });
-      setShowAddForm(false);
-      setFormData({
-        name: "",
-        section: "",
-        classTeacher: "",
-        subjects: "",
-        capacity: 40,
-        startTime: "09:00",
-        endTime: "15:00"
-      });
-      refetch();
+      const teachersRes = await teacherAPI.getAllTeachers();
+      setTeachers(teachersRes.data || teachersRes);
+      
+      const classesRes = await classAPI.getAllClasses();
+      console.log("Classes:", classesRes);
+      setClasses(classesRes.data || classesRes);
     } catch (error) {
-      console.error("Error adding class:", error);
+      console.error("Error:", error);
+      toast.error("Failed to load data");
     }
   };
 
-  const handleDelete = async (classId) => {
-    if (window.confirm("Are you sure you want to delete this class?")) {
-      try {
-        await deleteClassMutation(classId);
-        refetch();
-      } catch (error) {
-        console.error("Error deleting class:", error);
-      }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    if (name === "classTeacher" && value) {
+      const selectedTeacher = teachers.find(t => t._id === value);
+      setSubjects(selectedTeacher?.subjects || []);
+      setFormData(prev => ({ ...prev, subjects: "" }));
     }
+  };
+
+  const handleSubjectChange = (subject) => {
+    setFormData(prev => ({ ...prev, subjects: subject }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const classData = {
+        name: formData.className,
+        section: formData.section,
+        grade: formData.className,
+        classTeacher: formData.classTeacher,
+        subjects: [formData.subjects]
+      };
+      
+      if (isEditMode) {
+        await classAPI.updateClass(editingClassId, classData);
+        toast.success("Class updated successfully");
+      } else {
+        await classAPI.createClass(classData);
+        toast.success("Class created successfully");
+      }
+      
+      await fetchData();
+      
+      setFormData({
+        className: "",
+        section: "",
+        classTeacher: "",
+        subjects: ""
+      });
+      setSubjects([]);
+      setIsEditMode(false);
+      setEditingClassId(null);
+    } catch (error) {
+      toast.error(error.message || "Failed to save class");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure?")) return;
+    
+    try {
+      await classAPI.deleteClass(id);
+      toast.success("Class deleted");
+      setClasses(classes.filter(c => c._id !== id));
+    } catch (error) {
+      toast.error("Failed to delete");
+    }
+  };
+
+  const handleEdit = (cls) => {
+    setIsEditMode(true);
+    setEditingClassId(cls._id);
+    setFormData({
+      className: cls.name,
+      section: cls.section,
+      classTeacher: cls.classTeacher?._id || "",
+      subjects: cls.subjects?.[0] || ""
+    });
+    
+    if (cls.classTeacher?._id) {
+      const teacher = teachers.find(t => t._id === cls.classTeacher._id);
+      setSubjects(teacher?.subjects || []);
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingClassId(null);
+    setFormData({
+      className: "",
+      section: "",
+      classTeacher: "",
+      subjects: ""
+    });
+    setSubjects([]);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <AnimatePresence mode="wait">
-          {!selectedClass && !showAddForm ? (
-            <motion.div
-              key="classList"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <FaSchool className="text-3xl text-blue-600" />
-                  <h1 className="text-3xl font-bold text-gray-800">Manage Classes</h1>
-                </div>
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-                >
-                  <FaPlus /> Add Class
-                </button>
-              </div>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-6"
+        >
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-6">
+            <FaSchool className="text-blue-600" />
+            {isEditMode ? "Edit Class" : "Manage Classes"}
+          </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {apiClasses.map((cls) => (
-                  <motion.div
-                    key={cls._id}
-                    whileHover={{ y: -5 }}
-                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
+          {isEditMode && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+              <p className="text-sm text-blue-700">Editing class</p>
+              <button
+                onClick={handleCancelEdit}
+                className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <FaTimes /> Cancel
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <FaSchool /> Class Name
+              </label>
+              <input
+                type="text"
+                name="className"
+                value={formData.className}
+                onChange={handleChange}
+                placeholder="Enter class name"
+                className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700">Section</label>
+              <select
+                name="section"
+                value={formData.section}
+                onChange={handleChange}
+                className="w-full mt-1 px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <FaUser /> Class Teacher
+              </label>
+              <select
+                name="classTeacher"
+                value={formData.classTeacher}
+                onChange={handleChange}
+                className="w-full mt-1 px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select Teacher</option>
+                {teachers.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <FaBook /> Subject (Select one)
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
+                {subjects.length === 0 && (
+                  <p className="col-span-2 text-sm text-gray-500 text-center py-4">
+                    {formData.classTeacher ? "No subjects available" : "Please select a teacher first"}
+                  </p>
+                )}
+                {subjects.map((subject) => (
+                  <label
+                    key={subject}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">{cls.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                          <FaUser className="text-green-500" />
-                          <span>{cls.classTeacher?.name || "No Teacher"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                          <FaBook className="text-blue-500" />
-                          <span>{cls.students?.length || 0} Students</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <FaClock className="text-orange-500" />
-                          <span>Capacity: {cls.capacity}</span>
-                        </div>
-                      </div>
+                    <input
+                      type="radio"
+                      name="subject"
+                      checked={formData.subjects === subject}
+                      onChange={() => handleSubjectChange(subject)}
+                      className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-700">{subject}</span>
+                  </label>
+                ))}
+              </div>
+              {formData.subjects && (
+                <div className="mt-2 p-2 bg-blue-50 rounded">
+                  <p className="text-xs text-blue-700 font-medium">
+                    Selected: {formData.subjects}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+            >
+              {isEditMode ? (
+                <><FaEdit /> Update Class</>
+              ) : (
+                <><FaPlus /> Save Class</>
+              )}
+            </motion.button>
+          </form>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-xl shadow-lg p-6"
+        >
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-6">
+            <FaSchool className="text-blue-600" />
+            All Classes ({classes.length})
+          </h2>
+
+          {classes.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No classes found</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {classes.map((cls) => (
+                <motion.div
+                  key={cls._id}
+                  whileHover={{ scale: 1.02 }}
+                  className="border rounded-lg p-4 hover:shadow-md transition"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">{cls.name}</h3>
+                      <p className="text-sm text-gray-600">Section: {cls.section}</p>
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-                      <span>Subjects: {cls.subjects?.join(", ") || "None"}</span>
-                    </div>
-                    
-                    <div className="flex justify-end gap-2">
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => setSelectedClass(cls)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm"
+                        onClick={() => handleEdit(cls)}
+                        className="text-blue-500 hover:text-blue-700"
                       >
-                        <FaEye /> View
+                        <FaEdit />
                       </button>
                       <button
                         onClick={() => handleDelete(cls._id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
+                        className="text-red-500 hover:text-red-700"
                       >
-                        <FaTrash /> Delete
+                        <FaTrash />
                       </button>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          ) : showAddForm ? (
-            <motion.div
-              key="addForm"
-              initial={{ opacity: 0, x: 200 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -200 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Add New Class</h2>
-              <form onSubmit={handleAddClass} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Class Name</label>
-                  <select
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Select Class</option>
-                    {classNames.map((className) => (
-                      <option key={className} value={className}>{className}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Section</label>
-                  <select
-                    value={formData.section}
-                    onChange={(e) => setFormData({...formData, section: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Select Section</option>
-                    {sections.map((section) => (
-                      <option key={section} value={section}>{section}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Class Teacher</label>
-                  <select
-                    value={formData.classTeacher}
-                    onChange={(e) => setFormData({...formData, classTeacher: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Teacher</option>
-                    {teachers.map((teacher) => (
-                      <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Subjects (comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.subjects}
-                    onChange={(e) => setFormData({...formData, subjects: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Math, English, Science"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-2 flex gap-4">
-                  <button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition"
-                  >
-                    Add Class
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-2 rounded-lg transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="classDetails"
-              initial={{ opacity: 0, x: 200 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -200 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Class Details: {selectedClass.name}</h2>
-                <button
-                  onClick={() => setSelectedClass(null)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-                >
-                  ← Back
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-2">Class Information</h3>
-                  <p><strong>Section:</strong> {selectedClass.section}</p>
-                  <p><strong>Capacity:</strong> {selectedClass.capacity}</p>
-                  <p><strong>Current Students:</strong> {selectedClass.students?.length || 0}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-2">Teacher & Schedule</h3>
-                  <p><strong>Class Teacher:</strong> {selectedClass.classTeacher?.name || "Not assigned"}</p>
-                  <p><strong>Schedule:</strong> {selectedClass.schedule?.startTime} - {selectedClass.schedule?.endTime}</p>
-                  <p><strong>Students:</strong> {selectedClass.students?.length || 0}</p>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-2">Subjects</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedClass.subjects?.map((subject, index) => (
-                    <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                      {subject}
-                    </span>
-                  )) || <span className="text-gray-500">No subjects assigned</span>}
-                </div>
-              </div>
-            </motion.div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <FaUser className="text-blue-500" />
+                      <span>{cls.classTeacher?.name || "No teacher"}</span>
+                    </div>
+                    
+                    <div className="flex items-start gap-2 text-gray-700">
+                      <FaBook className="text-green-500 mt-1" />
+                      <div className="flex flex-wrap gap-1">
+                        {cls.subjects?.map((sub, idx) => (
+                          <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                            {sub}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-600 pt-2 border-t">Capacity: {cls.capacity || 40}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           )}
-        </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   );

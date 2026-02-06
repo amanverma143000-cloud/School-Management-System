@@ -1,56 +1,79 @@
-import React, { useState } from "react";
-import { useGetNoticesQuery, useAddNoticeMutation, useDeleteNoticeMutation } from "../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { noticeAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 const Announcements = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const { data: apiNotices, isLoading, refetch } = useGetNoticesQuery();
-  const [addNotice] = useAddNoticeMutation();
-  const [deleteNotice] = useDeleteNoticeMutation();
-  
-  // ✅ सुरक्षित data transformation - Array.isArray() check
-  const announcements = Array.isArray(apiNotices) 
-    ? apiNotices.map(notice => ({
+  const [isImportant, setIsImportant] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const { user } = useAuth();
+
+  const fetchNotices = async () => {
+    try {
+      setIsLoading(true);
+      const response = await noticeAPI.getAllNotices();
+      const notices = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      setAnnouncements(notices.map(notice => ({
         id: notice._id,
         title: notice.title || "No Title",
         message: notice.description || "No Description",
         audience: notice.audience || "All",
         isImportant: notice.isImportant || false,
         createdAt: notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : "N/A"
-      }))
-    : []; // ✅ अगर apiNotices array नहीं है तो empty array use करें
+      })));
+    } catch (err) {
+      console.error("Error fetching notices:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // ✅ Step 2: Add new announcement (POST request)
+  useEffect(() => {
+    fetchNotices();
+  }, []);
+
+  // Add new announcement
   const handleAdd = async () => {
     if (title.trim() === "" || message.trim() === "") {
       alert("Please fill all fields!");
       return;
     }
 
+    const userId = user?._id || localStorage.getItem("userId") || localStorage.getItem("id");
+    
+    if (!userId || userId === 'undefined') {
+      alert("User ID not found! Please login again.");
+      return;
+    }
+
     try {
-      await addNotice({ 
+      const noticeData = { 
         title, 
         description: message,
+        createdBy: userId,
         audience: "All",
-        isImportant: false 
-      });
-
-      // Reset inputs
+        isImportant 
+      };
+      
+      await noticeAPI.createNotice(noticeData);
       setTitle("");
       setMessage("");
-      
-      // Refresh list
-      refetch();
+      setIsImportant(false);
+      fetchNotices();
+      alert("Announcement created successfully!");
     } catch (err) {
       console.error("Error adding announcement:", err);
+      alert(`Failed to create announcement: ${err.message}`);
     }
   };
 
-  // ✅ Step 3: Delete announcement (DELETE request)
+  // Delete announcement
   const handleDelete = async (id) => {
     try {
-      await deleteNotice(id);
-      refetch();
+      await noticeAPI.deleteNotice(id);
+      fetchNotices();
     } catch (err) {
       console.error("Error deleting announcement:", err);
     }
@@ -86,11 +109,28 @@ const Announcements = () => {
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 h-28 resize-none"
           />
 
+          {/* Importance Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsImportant(!isImportant)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isImportant 
+                  ? "bg-red-500 text-white hover:bg-red-600" 
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {isImportant ? "🔴 Important" : "⚪ Normal"}
+            </button>
+            <span className="text-sm text-gray-600">
+              Click to toggle importance
+            </span>
+          </div>
+
           <button
             onClick={handleAdd}
             className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg transition-all"
           >
-            Add
+            Add Announcement
           </button>
         </div>
       </div>

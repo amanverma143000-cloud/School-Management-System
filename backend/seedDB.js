@@ -39,12 +39,9 @@ const clearData = async () => {
 };
 
 const seedData = async () => {
+  // Sirf 1 admin create kar rahe hain
   const admins = await Admin.create([
-    { name: "Admin One", email: "admin1@school.com", password: "admin123", domain: "Management" },
-    { name: "Admin Two", email: "admin2@school.com", password: "admin123", domain: "Academics" },
-    { name: "Admin Three", email: "admin3@school.com", password: "admin123", domain: "Finance" },
-    { name: "Admin Four", email: "admin4@school.com", password: "admin123", domain: "HR" },
-    { name: "Admin Five", email: "admin5@school.com", password: "admin123", domain: "IT" }
+    { name: "Super Admin", email: "admin@school.com", password: "admin123", domain: "Management" }
   ]);
 
   const teachers = await Teacher.create([

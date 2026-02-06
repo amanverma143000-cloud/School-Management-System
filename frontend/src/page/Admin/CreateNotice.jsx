@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { useAddNoticeMutation } from "../../../Api/SchoolApi";
+import { noticeAPI } from "../../../services/api";
 import { FaBullhorn } from "react-icons/fa";
+import { useAuth } from "../../context/AuthProvider";
 
 const CreateNotice = () => {
-  const [addNotice, { isLoading }] = useAddNoticeMutation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -13,12 +15,16 @@ const CreateNotice = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
-      await addNotice(formData);
+      const userId = user?._id || localStorage.getItem("userId");
+      await noticeAPI.createNotice({ ...formData, createdBy: userId });
       alert("Notice created successfully!");
       setFormData({ title: "", description: "", audience: "All", isImportant: false });
     } catch (error) {
       alert("Failed to create notice");
+    } finally {
+      setIsLoading(false);
     }
   };
 

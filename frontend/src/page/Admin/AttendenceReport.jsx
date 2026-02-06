@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LineChart,
   Line,
@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useGetStudentsQuery, useGetTeachersQuery, useGetStudentAttendanceQuery, useGetTeacherAttendanceQuery } from "../../../Api/SchoolApi";
+import { studentAPI, teacherAPI, attendanceAPI } from "../../services/api";
 
 const AttendanceReport = () => {
   const [selectedOption, setSelectedOption] = useState("class");
@@ -19,12 +19,28 @@ const AttendanceReport = () => {
   const [studentName, setStudentName] = useState("");
   const [studentClass, setStudentClass] = useState("");
   const [teacherName, setTeacherName] = useState("");
-  
-  // API calls
-  const { data: students = [] } = useGetStudentsQuery();
-  const { data: teachers = [] } = useGetTeachersQuery();
-  const { data: studentAttendance = [] } = useGetStudentAttendanceQuery();
-  const { data: teacherAttendance = [] } = useGetTeacherAttendanceQuery();
+  const [students, setStudents] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [studentsData, teachersData] = await Promise.all([
+          studentAPI.getAllStudents(),
+          teacherAPI.getAllTeachers()
+        ]);
+        setStudents(studentsData.data || studentsData || []);
+        setTeachers(teachersData.data || teachersData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
   
   // Get unique classes from students
   const classes = [...new Set(students.map(s => `${s.class} - ${s.section}`))];

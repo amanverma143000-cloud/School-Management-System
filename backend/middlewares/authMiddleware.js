@@ -1,32 +1,41 @@
-// authMiddleware.js
+// Authentication Middleware - ye file user authentication aur authorization handle karti hai
+
+// JWT (JSON Web Token) library import kar rahe hain - token verification ke liye
 import jwt from "jsonwebtoken";
+// Saare user models import kar rahe hain
 import Admin from "../models/Admin.js";
 import Teacher from "../models/Teacher.js";
 import Student from "../models/Student.js";
 
-// Protect middleware – verify JWT token
+// 🔒 PROTECT MIDDLEWARE - ye check karta hai ki user logged in hai ya nahi
+// Har protected route se pehle ye function chalega
 export const protect = async (req, res, next) => {
   let token;
 
   try {
-    // 1️⃣ Check Authorization header
+    // 🔍 STEP 1: Authorization header check kar rahe hain
+    // Header format: "Bearer <token>"
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      // "Bearer " ke baad ka part (actual token) extract kar rahe hain
       token = req.headers.authorization.split(" ")[1];
 
+      // Agar token nahi mila to error
       if (!token) {
         return res.status(401).json({ message: "Not authorized, no token" });
       }
 
-      // 2️⃣ Verify token
+      // 🔐 STEP 2: Token verify kar rahe hain
+      // JWT secret key se token ko decode kar rahe hain
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "supersecretkey123");
 
-      // 3️⃣ Fetch user based on role
+      // 👤 STEP 3: User role ke basis par database se user find kar rahe hain
       let user;
-      const role = decoded.role || decoded.userRole;
+      const role = decoded.role || decoded.userRole; // Token se role extract kar rahe hain
       
+      // Role ke basis par appropriate model se user find karenge
       if (role === "Admin" || role === "admin") {
-        user = await Admin.findById(decoded.id).select("-password");
-        if (user) user.role = "Admin";
+        user = await Admin.findById(decoded.id).select("-password"); // Password exclude kar rahe hain
+        if (user) user.role = "Admin"; // Role set kar rahe hain
       } else if (role === "Teacher" || role === "teacher") {
         user = await Teacher.findById(decoded.id).select("-password");
         if (user) user.role = "Teacher";
@@ -34,19 +43,25 @@ export const protect = async (req, res, next) => {
         user = await Student.findById(decoded.id).select("-password");
         if (user) user.role = "Student";
       } else {
+        // Invalid role hai to error
         return res.status(401).json({ message: "Invalid user role" });
       }
 
+      // Agar user database mein nahi mila to error
       if (!user) {
         return res.status(401).json({ message: "Not authorized, user not found" });
       }
 
-      req.user = user; // attach user info to request
-      next();
+      // ✅ SUCCESS: User info ko request object mein attach kar rahe hain
+      // Ab agle functions mein req.user se user ki details mil jayengi
+      req.user = user;
+      next(); // Next middleware/controller function par jaenge
     } else {
+      // Authorization header nahi mila to error
       return res.status(401).json({ message: "Not authorized, no token" });
     }
   } catch (error) {
+    // Token verification fail ho gaya to error
     console.error("Protect middleware error:", error.message);
     return res.status(401).json({
       message: "Not authorized, token failed or malformed",
@@ -54,17 +69,23 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Role-based authorization
+// 🛡️ ROLE-BASED AUTHORIZATION - specific roles ko hi access dene ke liye
+// Example: authorizeRoles("Admin", "Teacher") - sirf Admin aur Teacher access kar sakte hain
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    // Current user ka role get kar rahe hain (lowercase mein convert karke)
     const userRole = req.user?.role?.toLowerCase();
+    // Allowed roles ko bhi lowercase mein convert kar rahe hain
     const allowedRoles = roles.map(role => role.toLowerCase());
     
+    // Check kar rahe hain ki user ka role allowed roles mein hai ya nahi
     if (!req.user || !allowedRoles.includes(userRole)) {
       return res.status(403).json({
         message: `Only ${roles.join("/")} can access this route`,
       });
     }
+    
+    // Agar role match karta hai to next function par jaenge
     next();
   };
 };

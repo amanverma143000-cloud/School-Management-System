@@ -6,6 +6,7 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  getUniqueSections
 } from "../controllers/studentController.js";
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
@@ -26,6 +27,7 @@ router.use(protect);                 // Login required
 router.use(authorizeRoles("Admin")); // Only Admin can manage students
 
 // Meaningful URLs
+router.get("/student/sections", getUniqueSections);   // Get unique sections (pehle specific route)
 router.post("/student/add", createStudent);           // Create student
 router.get("/student/all", getAllStudents);           // Get all students
 router.get("/student/:id", getStudentById);           // Get single student

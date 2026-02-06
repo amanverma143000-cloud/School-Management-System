@@ -1,11 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Bell } from "lucide-react";
-import { useGetNoticesQuery } from "../../../Api/SchoolApi";
+import { noticeAPI } from "../../services/api";
 
 const ViewNotice = () => {
-  const { data: noticesResponse, isLoading, error } = useGetNoticesQuery();
+  const [notices, setNotices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedNotice, setSelectedNotice] = useState(null);
+
+  useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        setIsLoading(true);
+        const data = await noticeAPI.getAllNotices();
+        setNotices(data.data || data || []);
+      } catch (err) {
+        console.error('Error fetching notices:', err);
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchNotices();
+  }, []);
 
   const handleNoticeClick = (notice) => {
     setSelectedNotice(notice);
@@ -26,12 +44,10 @@ const ViewNotice = () => {
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen text-red-600 text-lg">
-        Error loading notices: {error.message}
+        Error loading notices: {error.message || 'Failed to load'}
       </div>
     );
   }
-
-  const notices = noticesResponse?.notices || [];
 
   if (selectedNotice) {
     return (

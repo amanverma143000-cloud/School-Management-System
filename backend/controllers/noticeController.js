@@ -6,12 +6,12 @@ export const createNotice = async (req, res) => {
   try {
     const { title, description, createdBy, audience, isImportant, expiryDate } = req.body;
 
-    // ✅ Check if valid Admin
-    const admin = await Admin.findById(createdBy);
-    if (!admin || admin.role !== "Admin") {
-      return res.status(403).json({
+    console.log("Received notice data:", req.body);
+
+    if (!createdBy || createdBy === 'undefined') {
+      return res.status(400).json({
         success: false,
-        message: "Access denied! Only valid admins can create notices.",
+        message: "createdBy field is required and cannot be undefined",
       });
     }
 
@@ -19,7 +19,7 @@ export const createNotice = async (req, res) => {
     const notice = await Notice.create({
       title,
       description,
-      createdBy: admin._id, // store admin reference properly
+      createdBy,
       audience,
       isImportant,
       expiryDate,
@@ -31,6 +31,7 @@ export const createNotice = async (req, res) => {
       notice,
     });
   } catch (error) {
+    console.error("Error creating notice:", error);
     res.status(400).json({
       success: false,
       message: "Error creating notice",
