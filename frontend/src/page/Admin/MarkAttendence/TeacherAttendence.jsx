@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { teacherAPI } from "../../../services/api";
+import { teacherAPI, attendanceAPI } from "../../../services/api";
 
 export default function TeacherAttendance({ goBack }) {
   const [teachersData, setTeachersData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -13,6 +14,7 @@ export default function TeacherAttendance({ goBack }) {
         setTeachersData(data.data || data || []);
       } catch (error) {
         console.error('Error fetching teachers:', error);
+        alert('Failed to load teachers');
       } finally {
         setIsLoading(false);
       }
@@ -29,15 +31,13 @@ export default function TeacherAttendance({ goBack }) {
 
   const [attendance, setAttendance] = useState({});
   const [savedAttendance, setSavedAttendance] = useState(null);
-  const [viewMode, setViewMode] = useState("mark"); // mark | view | completed
+  const [viewMode, setViewMode] = useState("mark");
 
-  // ✅ Load saved data from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("teacherAttendance");
     if (stored) setSavedAttendance(JSON.parse(stored));
   }, []);
 
-  // ✅ Save attendance to localStorage whenever updated
   useEffect(() => {
     if (savedAttendance)
       localStorage.setItem("teacherAttendance", JSON.stringify(savedAttendance));
@@ -48,13 +48,33 @@ export default function TeacherAttendance({ goBack }) {
     setAttendance((prev) => ({ ...prev, [id]: status }));
   };
 
-  const handleSave = () => {
-    const currentDate = new Date().toLocaleDateString();
-    setSavedAttendance({
-      data: attendance,
-      date: currentDate,
-    });
-    setViewMode("completed");
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const attendancePromises = Object.entries(attendance).map(([teacherId, status]) =>
+        attendanceAPI.markTeacherAttendance({
+          teacherId,
+          status,
+          date: new Date().toISOString()
+        })
+      );
+      
+      await Promise.all(attendancePromises);
+      
+      const currentDate = new Date().toLocaleDateString();
+      setSavedAttendance({
+        data: attendance,
+        date: currentDate,
+      });
+      
+      alert('Teacher attendance saved successfully!');
+      setViewMode("completed");
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      alert(error.message || 'Failed to save attendance');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleView = () => {
@@ -210,9 +230,10 @@ export default function TeacherAttendance({ goBack }) {
             >
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md"
+                disabled={isSaving}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                💾 Save Attendance
+                {isSaving ? '⏳ Saving...' : '💾 Save Attendance'}
               </button>
             </motion.div>
           )}

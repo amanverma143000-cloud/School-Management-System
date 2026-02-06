@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Send, Eye, X } from "lucide-react";
+import { leaveAPI } from "../../services/api";
 
 const LeaveApply = () => {
   const [formData, setFormData] = useState({
@@ -21,10 +22,21 @@ const LeaveApply = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("Pending");
-    alert("✅ Leave Request Submitted Successfully!");
+    try {
+      await leaveAPI.applyLeave({
+        fromDate: formData.fromDate,
+        toDate: formData.toDate,
+        reason: formData.reason,
+        attachment: formData.file?.name || ""
+      });
+      setStatus("Pending");
+      alert("✅ Leave Request Submitted Successfully!");
+      setFormData({ fromDate: "", toDate: "", reason: "", file: null });
+    } catch (error) {
+      alert("❌ Error: " + (error.message || "Failed to submit leave request"));
+    }
   };
 
   return (

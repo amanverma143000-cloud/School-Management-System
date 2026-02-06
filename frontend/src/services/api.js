@@ -100,11 +100,11 @@ export const eventAPI = {
 
 // ========== NOTICE APIs ==========
 export const noticeAPI = {
-  getAllNotices: () => api.get('/admin/notices'),
-  getNoticeById: (id) => api.get(`/admin/notices/${id}`),
-  createNotice: (noticeData) => api.post('/admin/notices', noticeData),
-  updateNotice: (id, noticeData) => api.put(`/admin/notices/${id}`, noticeData),
-  deleteNotice: (id) => api.delete(`/admin/notices/${id}`),
+  getAllNotices: () => api.get('/admin/notices/notice/all'),
+  getNoticeById: (id) => api.get(`/admin/notices/notice/${id}`),
+  createNotice: (noticeData) => api.post('/admin/notices/notice/add', noticeData),
+  updateNotice: (id, noticeData) => api.put(`/admin/notices/notice/update/${id}`, noticeData),
+  deleteNotice: (id) => api.delete(`/admin/notices/notice/delete/${id}`),
 };
 
 // ========== HOMEWORK APIs ==========
@@ -118,13 +118,11 @@ export const homeworkAPI = {
 
 // ========== LEAVE APIs ==========
 export const leaveAPI = {
-  getAllLeaves: () => api.get('/admin/leaves'),
-  getLeaveById: (id) => api.get(`/admin/leaves/${id}`),
-  createLeave: (leaveData) => api.post('/student/leave', leaveData),
-  updateLeave: (id, leaveData) => api.put(`/admin/leaves/${id}`, leaveData),
-  deleteLeave: (id) => api.delete(`/admin/leaves/${id}`),
-  approveLeave: (id) => api.put(`/admin/leaves/${id}/approve`),
-  rejectLeave: (id) => api.put(`/admin/leaves/${id}/reject`),
+  applyLeave: (leaveData) => api.post('/student/leave/apply', leaveData),
+  getAllLeaves: () => api.get('/admin/leaves/leave/all'),
+  getLeaveById: (id) => api.get(`/admin/leaves/leave/${id}`),
+  updateLeaveStatus: (id, status) => api.put(`/admin/leaves/leave/${id}`, { status }),
+  deleteLeave: (id) => api.delete(`/admin/leaves/leave/${id}`),
 };
 
 // ========== RESULT APIs ==========
@@ -147,10 +145,19 @@ export const examAPI = {
 
 // ========== ATTENDANCE APIs ==========
 export const attendanceAPI = {
-  getStudentAttendance: () => api.get('/admin/attendance/students'),
-  getTeacherAttendance: () => api.get('/admin/attendance/teachers'),
-  markStudentAttendance: (attendanceData) => api.post('/admin/attendance/students', attendanceData),
-  markTeacherAttendance: (attendanceData) => api.post('/admin/attendance/teachers', attendanceData),
+  // Student Attendance
+  markStudentAttendance: (attendanceData) => api.post('/attendance/student', attendanceData),
+  getStudentAttendance: (studentId) => api.get(`/attendance/student/${studentId}`),
+  getAllStudentsAttendance: () => api.get('/attendance/student'),
+  updateStudentAttendance: (id, attendanceData) => api.put(`/attendance/student/${id}`, attendanceData),
+  deleteStudentAttendance: (id) => api.delete(`/attendance/student/${id}`),
+  
+  // Teacher Attendance
+  markTeacherAttendance: (attendanceData) => api.post('/attendance/teacher', attendanceData),
+  getTeacherAttendance: (teacherId) => api.get(`/attendance/teacher/${teacherId}`),
+  getAllTeachersAttendance: () => api.get('/attendance/teacher'),
+  updateTeacherAttendance: (id, attendanceData) => api.put(`/attendance/teacher/${id}`, attendanceData),
+  deleteTeacherAttendance: (id) => api.delete(`/attendance/teacher/${id}`),
 };
 
 // ========== HOLIDAY APIs ==========
@@ -160,6 +167,15 @@ export const holidayAPI = {
   createHoliday: (holidayData) => api.post('/admin/holidays', holidayData),
   updateHoliday: (id, holidayData) => api.put(`/admin/holidays/${id}`, holidayData),
   deleteHoliday: (id) => api.delete(`/admin/holidays/${id}`),
+};
+
+// ========== ANNOUNCEMENT APIs ==========
+export const announcementAPI = {
+  getAllAnnouncements: () => api.get('/admin/announcements'),
+  getAnnouncementById: (id) => api.get(`/admin/announcements/${id}`),
+  createAnnouncement: (announcementData) => api.post('/admin/announcements', announcementData),
+  updateAnnouncement: (id, announcementData) => api.put(`/admin/announcements/${id}`, announcementData),
+  deleteAnnouncement: (id) => api.delete(`/admin/announcements/${id}`),
 };
 
 // Default export - main api instance

@@ -14,7 +14,7 @@ const Announcements = () => {
     try {
       setIsLoading(true);
       const response = await noticeAPI.getAllNotices();
-      const notices = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      const notices = response?.notices || [];
       setAnnouncements(notices.map(notice => ({
         id: notice._id,
         title: notice.title || "No Title",
@@ -25,6 +25,7 @@ const Announcements = () => {
       })));
     } catch (err) {
       console.error("Error fetching notices:", err);
+      setAnnouncements([]);
     } finally {
       setIsLoading(false);
     }
@@ -41,23 +42,16 @@ const Announcements = () => {
       return;
     }
 
-    const userId = user?._id || localStorage.getItem("userId") || localStorage.getItem("id");
-    
-    if (!userId || userId === 'undefined') {
-      alert("User ID not found! Please login again.");
-      return;
-    }
-
     try {
       const noticeData = { 
         title, 
         description: message,
-        createdBy: userId,
         audience: "All",
         isImportant 
       };
       
       await noticeAPI.createNotice(noticeData);
+      
       setTitle("");
       setMessage("");
       setIsImportant(false);
@@ -65,17 +59,20 @@ const Announcements = () => {
       alert("Announcement created successfully!");
     } catch (err) {
       console.error("Error adding announcement:", err);
-      alert(`Failed to create announcement: ${err.message}`);
+      alert(`Failed to create announcement: ${err.response?.data?.message || err.message}`);
     }
   };
 
   // Delete announcement
   const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this announcement?")) return;
     try {
       await noticeAPI.deleteNotice(id);
+      alert("Announcement deleted successfully!");
       fetchNotices();
     } catch (err) {
       console.error("Error deleting announcement:", err);
+      alert("Failed to delete announcement!");
     }
   };
 

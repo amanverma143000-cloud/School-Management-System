@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { leaveAPI } from "../../services/api";
 
 const LeaveRequests = () => {
   const [leaves, setLeaves] = useState([]);
@@ -8,28 +9,54 @@ const LeaveRequests = () => {
 
   useEffect(() => {
     const fetchLeaves = async () => {
-      const dummyData = [
-        { id: 1, student: "Aman Verma", className: "10th", date: "2025-10-12", reason: "Medical leave" },
-        { id: 2, student: "Riya Sharma", className: "9th", date: "2025-10-12", reason: "Family emergency" },
-        { id: 3, student: "Rahul Singh", className: "8th", date: "2025-10-12", reason: "Personal work" },
-      ];
-      setLeaves(dummyData);
-      setLoading(false);
+      try {
+        const response = await leaveAPI.getAllLeaves();
+        const apiLeaves = Array.isArray(response) ? response : [];
+        const pendingLeaves = apiLeaves
+          .filter(leave => leave.status === "Pending")
+          .map(leave => ({
+            id: leave._id,
+            student: leave.requester?.name + " " + (leave.requester?.lastname || ""),
+            className: (leave.requester?.class || "") + " - " + (leave.requester?.section || ""),
+            date: new Date(leave.fromDate).toLocaleDateString() + " to " + new Date(leave.toDate).toLocaleDateString(),
+            reason: leave.reason,
+            fromDate: new Date(leave.fromDate).toLocaleDateString(),
+            toDate: new Date(leave.toDate).toLocaleDateString()
+          }));
+        setLeaves(pendingLeaves);
+      } catch (err) {
+        console.error("Error fetching leaves:", err);
+        setLeaves([]);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchLeaves();
   }, []);
 
   const handleOpenApplication = (leave) => setSelectedLeave(leave);
   const handleBack = () => setSelectedLeave(null);
-  const handleConfirmLeave = (id) => {
-    alert("Leave confirmed for ID: " + id);
-    setLeaves(prev => prev.filter(l => l.id !== id));
-    setSelectedLeave(null);
+  const handleConfirmLeave = async (id) => {
+    try {
+      await leaveAPI.updateLeaveStatus(id, "Approved");
+      alert("Leave approved successfully!");
+      setLeaves(prev => prev.filter(l => l.id !== id));
+      setSelectedLeave(null);
+    } catch (err) {
+      console.error("Error approving leave:", err);
+      alert("Failed to approve leave!");
+    }
   };
-  const handleCancelLeave = (id) => {
-    alert("Leave cancelled for ID: " + id);
-    setLeaves(prev => prev.filter(l => l.id !== id));
-    setSelectedLeave(null);
+  const handleCancelLeave = async (id) => {
+    try {
+      await leaveAPI.updateLeaveStatus(id, "Rejected");
+      alert("Leave rejected successfully!");
+      setLeaves(prev => prev.filter(l => l.id !== id));
+      setSelectedLeave(null);
+    } catch (err) {
+      console.error("Error rejecting leave:", err);
+      alert("Failed to reject leave!");
+    }
   };
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading leaves...</div>;

@@ -10,11 +10,11 @@ const LeaveManagement = () => {
     try {
       setIsLoading(true);
       const response = await leaveAPI.getAllLeaves();
-      const apiLeaves = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      const apiLeaves = Array.isArray(response) ? response : [];
       setLeaves(apiLeaves.map(leave => ({
         id: leave._id,
-        studentName: leave.requester?.name + " " + leave.requester?.lastname || "Unknown Student",
-        class: leave.requester?.class + " - " + leave.requester?.section || "Unknown Class",
+        studentName: leave.requester?.name + " " + (leave.requester?.lastname || ""),
+        class: (leave.requester?.class || "") + " - " + (leave.requester?.section || ""),
         from: new Date(leave.fromDate).toLocaleDateString(),
         to: new Date(leave.toDate).toLocaleDateString(),
         reason: leave.reason,
@@ -23,6 +23,7 @@ const LeaveManagement = () => {
       })));
     } catch (err) {
       console.error("Error fetching leaves:", err);
+      setLeaves([]);
     } finally {
       setIsLoading(false);
     }
@@ -31,6 +32,17 @@ const LeaveManagement = () => {
   useEffect(() => {
     fetchLeaves();
   }, []);
+
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await leaveAPI.updateLeaveStatus(id, status);
+      alert(`Leave ${status.toLowerCase()} successfully!`);
+      fetchLeaves();
+    } catch (err) {
+      console.error("Error updating leave status:", err);
+      alert("Failed to update leave status!");
+    }
+  };
   
   
   if (isLoading) {
@@ -133,9 +145,24 @@ const LeaveManagement = () => {
                   </td>
                   <td className="p-3">{leave.teacher}</td>
                   <td className="p-3">
-                    <button className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
-                      View
-                    </button>
+                    {leave.status === "Pending" ? (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleStatusUpdate(leave.id, "Approved")}
+                          className="px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleStatusUpdate(leave.id, "Rejected")}
+                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">No action</span>
+                    )}
                   </td>
                 </tr>
               ))
