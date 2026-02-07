@@ -75,32 +75,23 @@ export default function AdminDashboard() {
         
         console.log('Fetching dashboard data...');
         
-        // Parallel API calls kar rahe hain
+        // Parallel API calls
         const [studentsRes, teachersRes, eventsRes, noticesRes, homeworkRes] = await Promise.all([
-          studentAPI.getAllStudents().catch(err => { console.error('Students API error:', err); return { data: [] }; }),
-          teacherAPI.getAllTeachers().catch(err => { console.error('Teachers API error:', err); return { data: [] }; }),
-          eventAPI.getAllEvents().catch(err => { console.error('Events API error:', err); return { data: [] }; }),
-          noticeAPI.getAllNotices().catch(err => { console.error('Notices API error:', err); return { data: [] }; }),
-          homeworkAPI.getAllHomework().catch(err => { console.error('Homework API error:', err); return { data: [] }; })
+          studentAPI.getAllStudents().catch(err => { console.error('Students API error:', err); return []; }),
+          teacherAPI.getAllTeachers().catch(err => { console.error('Teachers API error:', err); return []; }),
+          eventAPI.getAllEvents().catch(err => { console.error('Events API error:', err); return []; }),
+          noticeAPI.getAllNotices().catch(err => { console.error('Notices API error:', err); return []; }),
+          homeworkAPI.getAllHomework().catch(err => { console.error('Homework API error:', err); return []; })
         ]);
         
         console.log('API Responses:', { studentsRes, teachersRes, eventsRes, noticesRes, homeworkRes });
         
-        // Extract data from responses
-        const students = Array.isArray(studentsRes) ? studentsRes : (studentsRes?.data || studentsRes?.students || []);
-        const teachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.data || teachersRes?.teachers || []);
-        const events = Array.isArray(eventsRes) ? eventsRes : (eventsRes?.data || eventsRes?.events || []);
-        const notices = Array.isArray(noticesRes) ? noticesRes : (noticesRes?.data || noticesRes?.notices || []);
-        const homework = Array.isArray(homeworkRes) ? homeworkRes : (homeworkRes?.data || homeworkRes?.homework || []);
-        
-        console.log('Extracted data:', { students, teachers, events, notices, homework });
-        
         setDashboardData({
-          students,
-          teachers,
-          events,
-          notices,
-          homework,
+          students: Array.isArray(studentsRes) ? studentsRes : [],
+          teachers: Array.isArray(teachersRes) ? teachersRes : [],
+          events: Array.isArray(eventsRes) ? eventsRes : [],
+          notices: Array.isArray(noticesRes) ? noticesRes : [],
+          homework: Array.isArray(homeworkRes) ? homeworkRes : [],
           loading: false,
           error: null
         });

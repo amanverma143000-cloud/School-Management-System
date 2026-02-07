@@ -10,17 +10,25 @@ const LeaveManagement = () => {
     try {
       setIsLoading(true);
       const response = await leaveAPI.getAllLeaves();
+      console.log("API Response:", response);
       const apiLeaves = Array.isArray(response) ? response : [];
-      setLeaves(apiLeaves.map(leave => ({
-        id: leave._id,
-        studentName: leave.requester?.name + " " + (leave.requester?.lastname || ""),
-        class: (leave.requester?.class || "") + " - " + (leave.requester?.section || ""),
-        from: new Date(leave.fromDate).toLocaleDateString(),
-        to: new Date(leave.toDate).toLocaleDateString(),
-        reason: leave.reason,
-        status: leave.status,
-        teacher: leave.teacher?.name || "Unknown Teacher",
-      })));
+      setLeaves(apiLeaves.map(leave => {
+        console.log("Leave requester:", leave.requester);
+        return {
+          id: leave._id,
+          studentName: leave.requester?.name && leave.requester?.lastname 
+            ? `${leave.requester.name} ${leave.requester.lastname}` 
+            : "N/A",
+          class: leave.requester?.class && leave.requester?.section
+            ? `${leave.requester.class} - ${leave.requester.section}`
+            : "N/A",
+          from: new Date(leave.fromDate).toLocaleDateString(),
+          to: new Date(leave.toDate).toLocaleDateString(),
+          reason: leave.reason,
+          status: leave.status,
+          teacher: leave.teacher?.name || "Unknown Teacher",
+        };
+      }));
     } catch (err) {
       console.error("Error fetching leaves:", err);
       setLeaves([]);

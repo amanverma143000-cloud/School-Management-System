@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Send, Eye, X } from "lucide-react";
 import { leaveAPI } from "../../services/api";
@@ -13,6 +13,20 @@ const LeaveApply = () => {
 
   const [status, setStatus] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [leaveHistory, setLeaveHistory] = useState([]);
+
+  useEffect(() => {
+    fetchLeaveHistory();
+  }, []);
+
+  const fetchLeaveHistory = async () => {
+    try {
+      const response = await leaveAPI.getMyLeaves();
+      setLeaveHistory(response);
+    } catch (error) {
+      console.error("Error fetching leave history:", error);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -34,14 +48,28 @@ const LeaveApply = () => {
       setStatus("Pending");
       alert("✅ Leave Request Submitted Successfully!");
       setFormData({ fromDate: "", toDate: "", reason: "", file: null });
+      fetchLeaveHistory();
     } catch (error) {
       alert("❌ Error: " + (error.message || "Failed to submit leave request"));
     }
   };
 
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "Approved":
+        return "bg-green-100 text-green-700";
+      case "Rejected":
+        return "bg-red-100 text-red-700";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
   return (
     <div 
-      className="min-h-screen flex justify-center items-center p-6 overflow-hidden relative"
+      className="min-h-screen flex flex-col justify-center items-center p-6 overflow-hidden relative gap-6"
       style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
     >
       {/* Floating Papers */}
@@ -197,6 +225,52 @@ const LeaveApply = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Leave History Section */}
+      <motion.div
+        style={{ backgroundColor: "var(--card-bg)" }}
+        className="border-4 border-yellow-400 rounded-[2rem] p-6 w-full max-w-4xl"
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className="text-2xl font-bold text-[var(--text-secondary)] mb-4 flex items-center gap-2">
+          📋 My Leave History
+        </h2>
+        
+        {leaveHistory.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-yellow-100 border-b-2 border-yellow-400">
+                <tr>
+                  <th className="p-3">From</th>
+                  <th className="p-3">To</th>
+                  <th className="p-3">Reason</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Teacher</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaveHistory.map((leave) => (
+                  <tr key={leave._id} className="border-b hover:bg-yellow-50">
+                    <td className="p-3">{new Date(leave.fromDate).toLocaleDateString()}</td>
+                    <td className="p-3">{new Date(leave.toDate).toLocaleDateString()}</td>
+                    <td className="p-3">{leave.reason}</td>
+                    <td className="p-3">
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(leave.status)}`}>
+                        {leave.status}
+                      </span>
+                    </td>
+                    <td className="p-3">{leave.teacher?.name || "N/A"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">No leave requests yet.</p>
+        )}
+      </motion.div>
     </div>
   );
 };

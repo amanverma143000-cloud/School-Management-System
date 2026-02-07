@@ -119,6 +119,7 @@ export const homeworkAPI = {
 // ========== LEAVE APIs ==========
 export const leaveAPI = {
   applyLeave: (leaveData) => api.post('/student/leave/apply', leaveData),
+  getMyLeaves: () => api.get('/student/leave/my-leaves'),
   getAllLeaves: () => api.get('/admin/leaves/leave/all'),
   getLeaveById: (id) => api.get(`/admin/leaves/leave/${id}`),
   updateLeaveStatus: (id, status) => api.put(`/admin/leaves/leave/${id}`, { status }),
