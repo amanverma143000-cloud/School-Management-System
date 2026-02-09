@@ -2,6 +2,7 @@
 import Admin from "../models/Admin.js";
 import Teacher from "../models/Teacher.js";
 import Student from "../models/Student.js";
+import Class from "../models/Class.js";
 import generateToken from "../utils/generateToken.js";
 
 // 📝 ADMIN REGISTRATION - Naya admin create karne ke liye
@@ -42,34 +43,47 @@ export const loginAdmin = async (req, res) => {
     let role;
 
     // 🔍 Step 1: Admin mein check karte hain
+    console.log("Checking Admin...");
     user = await Admin.findOne({ email });
-    if (user) role = "Admin";
+    if (user) {
+      console.log("User found in Admin");
+      role = "Admin";
+    }
 
     // 🔍 Step 2: Teacher mein check karte hain
     if (!user) {
+      console.log("Checking Teacher...");
       user = await Teacher.findOne({ email });
-      if (user) role = "Teacher";
+      if (user) {
+        console.log("User found in Teacher");
+        role = "Teacher";
+      }
     }
 
     // 🔍 Step 3: Student mein check karte hain
     if (!user) {
+      console.log("Checking Student...");
       user = await Student.findOne({ email });
-      if (user) role = "Student";
+      if (user) {
+        console.log("User found in Student");
+        role = "Student";
+      }
+    }
+
+    if (!user) {
+      console.log("User not found");
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     // 🔐 Password verify karte hain
-    if (user && (await user.matchPassword(password))) {
-      // Role-based success message
-      let successMessage;
-      if (role === "Student") {
-        successMessage = `Welcome Student ${user.name}! You have successfully logged in.`;
-      } else if (role === "Teacher") {
-        successMessage = `Welcome Teacher ${user.name}! You have successfully logged in.`;
-      } else if (role === "Admin") {
-        successMessage = `Welcome Admin ${user.name}! You have successfully logged in.`;
-      }
+    console.log("Verifying password...");
+    const isMatch = await user.matchPassword(password);
+    console.log("Password match:", isMatch);
+    
+    if (isMatch) {
+      console.log("Login successful for:", role);
+      let successMessage = `Welcome ${role} ${user.name}! You have successfully logged in.`;
 
-      // Success response bhejte hain
       res.json({
         _id: user._id,
         name: user.name,
@@ -79,11 +93,13 @@ export const loginAdmin = async (req, res) => {
         message: successMessage
       });
     } else {
+      console.log("Password mismatch");
       res.status(401).json({ message: "Invalid email or password" });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login error:", error.message);
+    console.error("Stack:", error.stack);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -251,6 +267,17 @@ export const getAdminDashboardData = async (req, res) => {
         recentAdmins
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 📚 GET ADMIN ASSIGNED CLASSES - Admin ke assigned classes fetch karna
+export const getAdminClasses = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const classes = await Class.find({ createdBy: adminId }).select('name section grade');
+    res.status(200).json({ success: true, data: classes });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

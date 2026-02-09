@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { teacherAPI } from "../../../services/api";
+import { teacherAPI, studentAPI } from "../../../services/api";
 import { toast } from "react-toastify";
 
 const ManageTeachers = () => {
@@ -9,6 +9,7 @@ const ManageTeachers = () => {
   const [modalType, setModalType] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [teachers, setTeachers] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
@@ -18,16 +19,21 @@ const ManageTeachers = () => {
     location: "",
     experience: 0,
     subjects: [],
+    students: [],
   });
 
   const fetchTeachers = async () => {
     try {
       setIsLoading(true);
-      const data = await teacherAPI.getAllTeachers();
-      setTeachers(data.data || data || []);
+      const [teachersData, studentsData] = await Promise.all([
+        teacherAPI.getAllTeachers(),
+        studentAPI.getAllStudents()
+      ]);
+      setTeachers(teachersData.data || teachersData || []);
+      setAllStudents(Array.isArray(studentsData) ? studentsData : []);
     } catch (error) {
-      console.error('Error fetching teachers:', error);
-      toast.error('Failed to fetch teachers');
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data');
     } finally {
       setIsLoading(false);
     }
@@ -50,6 +56,7 @@ const ManageTeachers = () => {
         location: teacher.location || "",
         experience: teacher.experience || 0,
         subjects: teacher.subjects || [],
+        students: teacher.students?.map(s => s._id || s) || [],
       });
     } else {
       setFormData({
@@ -60,6 +67,7 @@ const ManageTeachers = () => {
         location: "",
         experience: 0,
         subjects: [],
+        students: [],
       });
     }
     setShowModal(true);
@@ -253,6 +261,22 @@ const ManageTeachers = () => {
                     onChange={(e) => setFormData({...formData, subjects: e.target.value.split(", ").filter(s => s.trim())})}
                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Assign Students:</label>
+                    <select
+                      multiple
+                      value={formData.students}
+                      onChange={(e) => setFormData({...formData, students: Array.from(e.target.selectedOptions, option => option.value)})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32"
+                    >
+                      {allStudents.map(student => (
+                        <option key={student._id} value={student._id}>
+                          {student.name} {student.lastname} - Class {student.class}-{student.section}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple students</p>
+                  </div>
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={handleSave}

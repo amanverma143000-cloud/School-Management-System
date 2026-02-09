@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { studentAPI, attendanceAPI } from "../../../services/api";
 
-const ClassReport = ({ classes, selectedClass, setSelectedClass, filter, setFilter }) => {
+const ClassReport = () => {
   const [chartData, setChartData] = useState([]);
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [filter, setFilter] = useState("weekly");
 
   useEffect(() => {
     fetchData();
@@ -24,71 +26,81 @@ const ClassReport = ({ classes, selectedClass, setSelectedClass, filter, setFilt
         studentAPI.getAllStudents(),
         attendanceAPI.getAllStudentsAttendance()
       ]);
-      console.log('Students Data:', studentsData);
-      console.log('Attendance Data:', attendanceData);
-      
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
-      setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
+      setStudents(Array.isArray(studentsData) ? studentsData : studentsData.data || []);
+      setAttendance(attendanceData.data || attendanceData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error:', error);
       setStudents([]);
       setAttendance([]);
     }
   };
 
   const processClassData = () => {
-    if (!Array.isArray(students) || !Array.isArray(attendance)) {
-      console.error('Invalid data format:', { students, attendance });
-      setChartData([]);
-      return;
-    }
-    
     const classStudents = students.filter(s => `${s.class} - ${s.section}` === selectedClass);
     const classStudentIds = classStudents.map(s => s._id);
-    const classAttendance = attendance.filter(att => classStudentIds.includes(att.student?._id || att.studentId));
+    const classAttendance = attendance.filter(att => {
+      const sid = att.student?._id || att.student;
+      return classStudentIds.includes(sid);
+    });
     
-    const processed = processAttendanceData(classAttendance, filter);
+    const processed = processData(classAttendance, filter);
     setChartData(processed);
   };
 
-  const processAttendanceData = (records, filterType) => {
-    if (!records || records.length === 0) return [];
-
+  const processData = (records, filterType) => {
     if (filterType === 'weekly') {
-      const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const last7Days = records.slice(-7);
-      return weekDays.map((day, index) => {
-        const record = last7Days[index];
-        if (record) {
-          const present = record.status === 'Present' ? 100 : 0;
-          return { name: day, value: present, status: record.status };
-        }
-        return { name: day, value: 0, status: 'N/A' };
+      const today = new Date();
+      const last7Days = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        last7Days.push(date);
+      }
+      
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      return last7Days.map(date => {
+        const dayName = days[date.getDay()];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        
+        const dayRecords = records.filter(rec => {
+          const recDate = new Date(rec.date);
+          const recYear = recDate.getFullYear();
+          const recMonth = String(recDate.getMonth() + 1).padStart(2, '0');
+          const recDay = String(recDate.getDate()).padStart(2, '0');
+          const recDateStr = `${recYear}-${recMonth}-${recDay}`;
+          return recDateStr === dateStr;
+        });
+        
+        const present = dayRecords.filter(r => r.status === 'Present').length;
+        const value = dayRecords.length > 0 ? (present / dayRecords.length) : 0;
+        
+        return { name: dayName, value };
       });
     } else if (filterType === 'monthly') {
-      const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-      const last30Days = records.slice(-30);
-      return weeks.map((week, index) => {
-        const weekData = last30Days.slice(index * 7, (index + 1) * 7);
-        const presentCount = weekData.filter(d => d.status === 'Present').length;
-        const percentage = weekData.length > 0 ? Math.round((presentCount / weekData.length) * 100) : 0;
-        const status = percentage > 75 ? 'Present' : percentage > 50 ? 'Leave' : 'Absent';
-        return { name: week, value: percentage, status };
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months.map((month, i) => {
+        const monthData = records.filter(r => new Date(r.date).getMonth() === i);
+        const present = monthData.filter(d => d.status === 'Present').length;
+        return { name: month, value: monthData.length ? (present / monthData.length) : 0 };
       });
     } else {
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return months.map((month, index) => {
-        const monthData = records.filter(record => {
-          const recordDate = new Date(record.date);
-          return recordDate.getMonth() === index;
-        });
-        const presentCount = monthData.filter(d => d.status === 'Present').length;
-        const percentage = monthData.length > 0 ? Math.round((presentCount / monthData.length) * 100) : 0;
-        const status = percentage > 75 ? 'Present' : percentage > 50 ? 'Leave' : 'Absent';
-        return { name: month, value: percentage, status };
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+      return years.map(year => {
+        const yearData = records.filter(r => new Date(r.date).getFullYear() === year);
+        const present = yearData.filter(d => d.status === 'Present').length;
+        return { name: year.toString(), value: yearData.length ? (present / yearData.length) : 0 };
       });
     }
   };
+
+  const classes = [...new Set(students.map(s => `${s.class} - ${s.section}`))];
+  const classStudents = students.filter(s => `${s.class} - ${s.section}` === selectedClass);
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
@@ -109,71 +121,42 @@ const ClassReport = ({ classes, selectedClass, setSelectedClass, filter, setFilt
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <select
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
           value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          className="flex-1 border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
-          <option value="">-- Select Class --</option>
+          <option value="">Select Class</option>
           {classes.map((cls, i) => (
             <option key={i} value={cls}>{cls}</option>
           ))}
         </select>
-
-        <div className="flex gap-2 justify-center">
-          {["weekly", "monthly", "yearly"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                filter === type ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"
-              }`}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis domain={[0, 100]} />
-          <Tooltip />
-          <Line type="monotone" dataKey="value" stroke="#2563EB" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-        </LineChart>
-      </ResponsiveContainer>
-
-      <div className="mt-6">
-        <table className="min-w-full border border-gray-300 text-center rounded-lg overflow-hidden">
-          <thead className="bg-blue-100">
-            <tr>
-              <th className="border p-2">Day / Period</th>
-              <th className="border p-2">Attendance %</th>
-              <th className="border p-2">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white text-gray-700">
-            {chartData.length > 0 ? chartData.map((row, index) => (
-              <tr key={index} className="odd:bg-white even:bg-gray-50 hover:bg-blue-50">
-                <td className="border p-2">{row.name}</td>
-                <td className="border p-2">{row.value}%</td>
-                <td className={`border p-2 font-semibold ${
-                  row.status === "Present" ? "text-green-600" : row.status === "Absent" ? "text-red-600" : "text-yellow-600"
-                }`}>
-                  {row.status}
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan="3" className="border p-4 text-gray-500">
-                  {selectedClass ? 'No attendance data available' : 'Please select a class'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="flex justify-center gap-3 mb-6">
+        {["weekly", "monthly", "yearly"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setFilter(type)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              filter === type ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"
+            }`}
+          >
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </button>
+        ))}
       </div>
+
+      {chartData.length > 0 && (
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis domain={[0, 1]} />
+            <Tooltip />
+            <Line type="monotone" dataKey="value" stroke="#2563EB" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </motion.div>
   );
 };

@@ -34,12 +34,14 @@ const Login = ({ closeLogin }) => {
 
       // ✅ LOGIN SUCCESS - Agar token mil gaya
       if (data?.token) {
+        console.log('Login response data:', data);
         // Context mein save kar rahe hain (localStorage ke liye)
         contextLogin({
           token: data.token,
           role: data.role,
           email: data.email,
-          name: data.name
+          name: data.name,
+          _id: data._id || data.id || data.userId
         });
         
         // Success message dikhayenge

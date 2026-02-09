@@ -6,10 +6,10 @@ import Class from "../models/Class.js";
 // 📋 GET ALL CLASSES - Saari classes ki list
 export const getAllClasses = async (req, res) => {
   try {
-    // Saari classes find kar rahe hain with populated data
-    const classes = await Class.find({})
-      .populate("classTeacher", "name email subjects")  // Teacher ki details
-      .sort({ grade: 1, section: 1 });                  // Grade aur section ke hisab se sort
+    const adminId = req.user.id;
+    const classes = await Class.find({ createdBy: adminId })
+      .populate("classTeacher", "name email subjects")
+      .sort({ grade: 1, section: 1 });
 
     res.status(200).json({
       success: true,
@@ -17,18 +17,15 @@ export const getAllClasses = async (req, res) => {
       data: classes
     });
   } catch (error) {
-    console.error("Get All Classes Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 📝 CREATE NEW CLASS - Nayi class banane ke liye
 export const createClass = async (req, res) => {
   try {
-    console.log("Create Class Request Body:", req.body);
+    const adminId = req.user.id;
     const { name, section, grade, classTeacher, subjects, capacity, schedule } = req.body;
 
-    // Validation
     if (!name || !section || !grade) {
       return res.status(400).json({ 
         success: false, 
@@ -36,8 +33,7 @@ export const createClass = async (req, res) => {
       });
     }
 
-    // Check karte hain ki same name ki class already exist to nahi karti
-    const existingClass = await Class.findOne({ name, section });
+    const existingClass = await Class.findOne({ name, section, createdBy: adminId });
     if (existingClass) {
       return res.status(400).json({ 
         success: false, 
@@ -45,7 +41,6 @@ export const createClass = async (req, res) => {
       });
     }
 
-    // Nayi class create karte hain
     const newClass = await Class.create({
       name,
       section,
@@ -53,12 +48,10 @@ export const createClass = async (req, res) => {
       classTeacher,
       subjects,
       capacity: capacity || 40,
-      schedule
+      schedule,
+      createdBy: adminId
     });
 
-    console.log("Class Created:", newClass);
-
-    // Created class ko populate karke return karte hain
     const populatedClass = await Class.findById(newClass._id)
       .populate("classTeacher", "name email subjects");
 
@@ -68,7 +61,6 @@ export const createClass = async (req, res) => {
       data: populatedClass
     });
   } catch (error) {
-    console.error("Create Class Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

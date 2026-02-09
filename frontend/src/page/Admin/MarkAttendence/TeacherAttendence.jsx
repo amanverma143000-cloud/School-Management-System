@@ -53,7 +53,7 @@ export default function TeacherAttendance({ goBack }) {
     try {
       const attendancePromises = Object.entries(attendance).map(([teacherId, status]) =>
         attendanceAPI.markTeacherAttendance({
-          teacherId,
+          teacherId: teacherId,
           status,
           date: new Date().toISOString()
         })

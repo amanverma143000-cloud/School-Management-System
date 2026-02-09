@@ -4,20 +4,26 @@ import {
   createHomework,
   getAllHomework,
   updateHomework,
-  deleteHomework
+  deleteHomework,
+  getTeacherSubjects,
+  getAvailableClasses
 } from "../controllers/homeworkController.js";
 
 const router = express.Router();
 
-// 🔐 Teacher protected routes
 router.use(protect);
-router.use(authorizeRoles("Teacher"));
 
-// Homework Routes
-router.post("/homework/add", createHomework);
+// ========== Teacher Routes (Create, Update, Delete) ==========
+router.post("/homework/add", authorizeRoles("Teacher"), createHomework);
+router.put("/homework/update/:id", authorizeRoles("Teacher"), updateHomework);
+router.delete("/homework/delete/:id", authorizeRoles("Teacher"), deleteHomework);
+
+// Teacher-specific routes
+router.get("/homework/teacher-subjects", authorizeRoles("Teacher"), getTeacherSubjects);
+router.get("/homework/available-classes", authorizeRoles("Teacher"), getAvailableClasses);
+
+// ========== Shared Routes (View) ==========
+// Both Teacher and Student can view homework
 router.get("/homework/all", getAllHomework);
-
-router.put("/homework/update/:id", updateHomework);
-router.delete("/homework/delete/:id", deleteHomework);
 
 export default router;

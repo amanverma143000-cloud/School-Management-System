@@ -77,12 +77,10 @@ const LeaveApply = () => {
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
+            className="absolute w-6 h-8 rounded shadow-md border border-yellow-300"
             style={{
               backgroundColor: "var(--card-bg)",
               opacity: 0.8,
-            }}
-            className="absolute w-6 h-8 rounded shadow-md border border-yellow-300"
-            style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
             }}

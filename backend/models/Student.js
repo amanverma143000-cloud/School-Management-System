@@ -18,6 +18,9 @@ const studentSchema = new mongoose.Schema({
   section: { type: String, required: true },                // Konsa section (e.g., "A", "B", "C")
   rollNumber: { type: String, required: true, unique: true }, // Roll number (unique hona chahiye)
 
+  // Student ko kisne add kiya
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admins", required: true },
+
   // Student ki attendance records - array of objects
   attendance: [{
     date: Date,                                             // Attendance ka date
@@ -26,51 +29,41 @@ const studentSchema = new mongoose.Schema({
   }],
 
   // Student ko assigned homework ka reference
-  homework: [{ type: mongoose.Schema.Types.ObjectId, ref: "Homework" }],
+  homework: [{ type: mongoose.Schema.Types.ObjectId, ref: "homework" }],
   
   // Student ke exam results
   examResults: [{
-    exam: { type: mongoose.Schema.Types.ObjectId, ref: "Exam" }, // Exam ka reference
+    exam: { type: mongoose.Schema.Types.ObjectId, ref: "exam" }, // Exam ka reference
     marks: Number,                                          // Kitne marks mile
     grade: String                                           // Grade (A, B, C, etc.)
   }],
   
   // Student ke leave requests ka reference
-  leaveRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "LeaveRequest" }]
+  leaveRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "leaverequest" }]
 }, { timestamps: true }); // timestamps: true se createdAt aur updatedAt automatically add ho jayenge
 
 // Pre-save middleware - ye function save karne se pehle chalega
-// Automatic email generation agar email provide nahi kiya gaya
 studentSchema.pre("save", async function (next) {
-  // Agar email nahi hai to automatically generate karein
+  // Automatic email generation agar email provide nahi kiya gaya
   if (!this.email) {
-    // Name aur lastname ko clean kar rahe hain (sirf letters rakhenge)
     const nameClean = this.name.toLowerCase().replace(/[^a-z]/g, '');
     const lastnameClean = this.lastname.toLowerCase().replace(/[^a-z]/g, '');
-    
-    // Base email format banayenge
     let baseEmail = `${nameClean}.${lastnameClean}`;
     let finalEmail = `${baseEmail}@college.edu`;
     let counter = 1;
     
-    // Check karenge ki ye email already exist to nahi karta
     while (await mongoose.models.students.findOne({ email: finalEmail })) {
-      finalEmail = `${baseEmail}${counter}@college.edu`; // Number add karenge agar duplicate hai
+      finalEmail = `${baseEmail}${counter}@college.edu`;
       counter++;
     }
-    
-    this.email = finalEmail; // Final email set kar denge
+    this.email = finalEmail;
   }
-  next(); // Next middleware par jaenge
-});
-
-// Password hashing middleware - password ko encrypt karne ke liye
-studentSchema.pre("save", async function (next) {
-  // Agar password modify nahi hua hai to kuch nahi karenge
-  if (!this.isModified("password")) return next();
   
-  // Password ko bcrypt se hash kar rahe hain (10 rounds of salting)
-  this.password = await bcrypt.hash(this.password, 10);
+  // Password hashing - agar password modify hua hai to hash karenge
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  
   next();
 });
 

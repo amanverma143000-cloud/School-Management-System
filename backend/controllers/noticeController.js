@@ -1,27 +1,22 @@
 import Notice from "../models/Notice.js";
 import Admin from "../models/Admin.js";
+import cloudinary from "../config/cloudinary.js";
 
 // 📌 Create Notice
 export const createNotice = async (req, res) => {
   try {
-    const { title, description, createdBy, audience, isImportant, expiryDate } = req.body;
+    const { title, description, audience, isImportant, expiryDate, image } = req.body;
+    const createdBy = req.user._id;
 
-    console.log("Received notice data:", req.body);
+    console.log('Received image:', image);
 
-    if (!createdBy || createdBy === 'undefined') {
-      return res.status(400).json({
-        success: false,
-        message: "createdBy field is required and cannot be undefined",
-      });
-    }
-
-    // ✅ Create Notice
     const notice = await Notice.create({
       title,
       description,
+      image: image || null,
       createdBy,
-      audience,
-      isImportant,
+      audience: audience || "All",
+      isImportant: isImportant || false,
       expiryDate,
     });
 
@@ -43,7 +38,16 @@ export const createNotice = async (req, res) => {
 // 📌 Get All Notices
 export const getAllNotices = async (req, res) => {
   try {
-    const notices = await Notice.find().sort({ createdAt: -1 });
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    let query = {};
+    if (userRole === 'Admin') {
+      query = { createdBy: userId };
+    }
+    // Teacher and Student can see all notices
+    
+    const notices = await Notice.find(query).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: notices.length,

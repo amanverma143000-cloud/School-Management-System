@@ -8,7 +8,8 @@ import {
   FaUserCircle,
   FaChalkboardTeacher,
   FaUsers,
-  FaCalendarCheck
+  FaCalendarCheck,
+  FaExclamationCircle
 } from "react-icons/fa";
 import { MdCampaign, MdEventNote, MdAssessment } from "react-icons/md";
 import { IoIosPaper } from "react-icons/io";
@@ -20,12 +21,22 @@ import MarkAttendance from "./MarkAttendence";
 import PostExam from "./PostExam";
 import LeaveRequests from "./LeaveRequest";
 import MarksUpload from "./UplodeMarks";
+import { teacherAPI, homeworkAPI, attendanceAPI, leaveAPI } from "../../services/api";
 
 export default function TeacherDashboard() {
   const [active, setActive] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
+    myClasses: "0",
+    totalStudents: "0",
+    pendingHomework: "0",
+    todayAttendance: "0",
+    pendingLeaves: "0"
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -35,6 +46,100 @@ export default function TeacherDashboard() {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const today = new Date().toISOString().split('T')[0];
+      console.log('Today date:', today);
+      
+      // Initialize data with defaults
+      let classes = [];
+      let students = [];
+      let homework = [];
+      let attendance = [];
+      let leaves = [];
+      
+      // Fetch data individually with error handling
+      try {
+        const classesRes = await teacherAPI.getMyClasses();
+        classes = Array.isArray(classesRes) ? classesRes : [];
+        console.log('Classes:', classes);
+      } catch (e) {
+        console.error('Error fetching classes:', e);
+      }
+      
+      try {
+        const studentsRes = await teacherAPI.getMyStudents();
+        students = Array.isArray(studentsRes) ? studentsRes : [];
+        console.log('Students:', students);
+      } catch (e) {
+        console.error('Error fetching students:', e);
+      }
+      
+      try {
+        const homeworkRes = await homeworkAPI.getAllHomework();
+        homework = Array.isArray(homeworkRes) ? homeworkRes : homeworkRes?.data || [];
+        console.log('Homework:', homework);
+      } catch (e) {
+        console.error('Error fetching homework:', e);
+      }
+      
+      try {
+        const attendanceRes = await attendanceAPI.getAllStudentsAttendance();
+        attendance = Array.isArray(attendanceRes) ? attendanceRes : attendanceRes?.data || attendanceRes?.attendance || [];
+        console.log('Attendance:', attendance);
+      } catch (e) {
+        console.error('Error fetching attendance:', e);
+      }
+      
+      try {
+        const leavesRes = await leaveAPI.getTeacherLeaves();
+        leaves = Array.isArray(leavesRes) ? leavesRes : leavesRes?.data || [];
+        console.log('Leaves:', leaves);
+      } catch (e) {
+        console.error('Error fetching leaves:', e);
+      }
+      
+      // Filter pending leaves
+      const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
+      
+      // Count today's attendance (Present only)
+      const todayAttendance = attendance.filter(a => {
+        if (!a.date) return false;
+        try {
+          const attDate = new Date(a.date).toISOString().split('T')[0];
+          return attDate === today && a.status === 'Present';
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      console.log('Today attendance count:', todayAttendance.length);
+      
+      setDashboardData({
+        myClasses: classes.length.toString(),
+        totalStudents: students.length.toString(),
+        pendingHomework: homework.length.toString(),
+        todayAttendance: todayAttendance.length.toString(),
+        pendingLeaves: pendingLeaves.toString()
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError("Failed to load dashboard data: " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -51,12 +156,13 @@ export default function TeacherDashboard() {
     { name: "Upload Marks", icon: <FaUpload /> },
   ];
 
-  // Mock data for dashboard stats
+  // Dashboard stats with API data
   const dashboardStats = [
-    { title: "My Classes", value: "3", icon: <FaChalkboardTeacher />, color: "text-blue-600" },
-    { title: "Total Students", value: "85", icon: <FaUsers />, color: "text-green-600" },
-    { title: "Pending Homework", value: "12", icon: <FaBookOpen />, color: "text-orange-600" },
-    { title: "Today's Attendance", value: "78", icon: <FaCalendarCheck />, color: "text-purple-600" },
+    { title: "My Classes", value: dashboardData.myClasses, icon: <FaChalkboardTeacher />, color: "text-blue-600" },
+    { title: "Total Students", value: dashboardData.totalStudents, icon: <FaUsers />, color: "text-green-600" },
+    { title: "Pending Homework", value: dashboardData.pendingHomework, icon: <FaBookOpen />, color: "text-orange-600" },
+    { title: "Today's Attendance", value: dashboardData.todayAttendance, icon: <FaCalendarCheck />, color: "text-purple-600" },
+    { title: "Pending Leaves", value: dashboardData.pendingLeaves, icon: <FaClipboardList />, color: "text-red-600" },
   ];
 
   return (
@@ -76,7 +182,7 @@ export default function TeacherDashboard() {
           bottom: 0,
           overflowY: "auto",
         }}
-        className="text-gray-900 p-4 flex flex-col border-r border-yellow-200"
+        className="text-gray-900 p-4 flex flex-col border-r border-yellow-200 z-20"
       >
         <div className="flex items-center justify-between mb-6">
           {isSidebarOpen && (
@@ -107,7 +213,7 @@ export default function TeacherDashboard() {
               )}
               <h3 className="font-semibold text-gray-800">{user?.name || "Teacher"}</h3>
               <p className="text-sm text-gray-600">{user?.email}</p>
-              <p className="text-xs text-gray-500 mt-1">Mathematics Teacher</p>
+              <p className="text-xs text-gray-500 mt-1">{user?.subjects?.join(", ") || "Teacher"}</p>
             </div>
           </div>
         )}
@@ -208,14 +314,23 @@ export default function TeacherDashboard() {
               "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)",
           }}
         >
-          {active === "Dashboard" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-xl text-yellow-600">Loading dashboard...</div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2">
+              <FaExclamationCircle />
+              {error}
+            </div>
+          ) : active === "Dashboard" ? (
             <>
               <h2 className="text-2xl font-bold mb-6 text-[var(--text-secondary)]">
                 📊 Teacher Dashboard
               </h2>
 
               {/* Dashboard Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
                 {dashboardStats.map((stat, i) => (
                   <motion.div
                     key={i}
@@ -254,20 +369,37 @@ export default function TeacherDashboard() {
                   transition={{ delay: 0.3 }}
                 >
                   <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    📚 Recent Homework
+                    📚 Quick Actions
                   </h3>
                   <div className="space-y-3">
-                    {["Math Assignment - Chapter 5", "Physics Lab Report", "Chemistry Problems"].map((homework, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{homework}</p>
-                          <p className="text-sm text-gray-600">Due: Tomorrow</p>
-                        </div>
-                        <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                          Active
-                        </span>
-                      </div>
-                    ))}
+                    <button 
+                      onClick={() => setActive("Add Homework")}
+                      className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                    >
+                      <span className="font-medium text-gray-800">Add New Homework</span>
+                      <span className="text-blue-600">→</span>
+                    </button>
+                    <button 
+                      onClick={() => setActive("Mark Attendance")}
+                      className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition"
+                    >
+                      <span className="font-medium text-gray-800">Mark Today's Attendance</span>
+                      <span className="text-green-600">→</span>
+                    </button>
+                    <button 
+                      onClick={() => setActive("Post Exam")}
+                      className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition"
+                    >
+                      <span className="font-medium text-gray-800">Create New Exam</span>
+                      <span className="text-purple-600">→</span>
+                    </button>
+                    <button 
+                      onClick={() => setActive("Upload Marks")}
+                      className="w-full flex items-center justify-between p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition"
+                    >
+                      <span className="font-medium text-gray-800">Upload Student Marks</span>
+                      <span className="text-orange-600">→</span>
+                    </button>
                   </div>
                 </motion.div>
 
@@ -282,20 +414,33 @@ export default function TeacherDashboard() {
                   transition={{ delay: 0.4 }}
                 >
                   <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    📋 Pending Leave Requests
+                    📋 Pending Tasks
                   </h3>
                   <div className="space-y-3">
-                    {["Rahul Sharma - Medical Leave", "Priya Singh - Family Function", "Amit Kumar - Personal Work"].map((request, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{request}</p>
-                          <p className="text-sm text-gray-600">2 days ago</p>
-                        </div>
-                        <span className="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded">
-                          Pending
-                        </span>
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-800">Review Leave Requests</p>
+                        <p className="text-sm text-gray-600">Check pending applications</p>
                       </div>
-                    ))}
+                      <button 
+                        onClick={() => setActive("Leave Request")}
+                        className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
+                      >
+                        Review
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-800">Upcoming Exams</p>
+                        <p className="text-sm text-gray-600">No exams scheduled</p>
+                      </div>
+                      <button 
+                        onClick={() => setActive("Post Exam")}
+                        className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"
+                      >
+                        Schedule
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               </div>
@@ -367,7 +512,7 @@ export default function TeacherDashboard() {
               <p><strong>Name:</strong> {user?.name || "Teacher"}</p>
               <p><strong>Email:</strong> {user?.email || "Not available"}</p>
               <p><strong>Role:</strong> {user?.role || "Teacher"}</p>
-              <p><strong>Subject:</strong> Mathematics</p>
+              <p><strong>Subjects:</strong> {user?.subjects?.join(", ") || "Not assigned"}</p>
             </div>
 
             {/* Buttons */}

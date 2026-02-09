@@ -32,5 +32,5 @@ adminSchema.methods.matchPassword = async function (enteredPassword) {
 }
 
 // Admin model create kar rahe hain aur export kar rahe hain
-const Admin = mongoose.model("Admin", adminSchema);
+const Admin = mongoose.model("admins", adminSchema, "admins");
 export default Admin;

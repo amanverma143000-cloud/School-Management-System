@@ -12,7 +12,8 @@ import {
   createAdmin,
   updateAdmin,
   deleteAdmin,
-  getAdminDashboardData
+  getAdminDashboardData,
+  getAdminClasses
 } from "../controllers/adminController.js";
 // Authentication middleware import kar rahe hain
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -41,5 +42,6 @@ router.delete("/admins/:id", deleteAdmin);     // Admin delete karna
 
 // Dashboard data
 router.get("/dashboard", getAdminDashboardData); // Dashboard ke liye data
+router.get("/classes", getAdminClasses);         // Admin ke assigned classes
 
 export default router;

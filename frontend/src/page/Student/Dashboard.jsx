@@ -10,7 +10,7 @@ import {
   FaGraduationCap,
   FaRegCalendarCheck,
   FaUserCircle,
-  FaChartLine,
+  FaBell ,
   FaTasks,
   FaCalendarCheck
 } from "react-icons/fa";
@@ -18,7 +18,7 @@ import { FiLogOut, FiMenu } from "react-icons/fi";
 import { MdAssessment } from "react-icons/md";
 import Student_img from "../../assets/student.jpg";
 
-import Dashboard from "./Dashbaord";
+
 import Homework from "./Homework";
 import Attendance from "./Attention";
 import Notice from "./Notice";
@@ -26,11 +26,21 @@ import Exam from "./Timetable";
 import Result from "./Result";
 import Leave from "./Leave";
 
+// Import APIs directly
+import { attendanceAPI, homeworkAPI, noticeAPI, examAPI } from "../../services/api";
+
 export default function StudentDashboard() {
   const [active, setActive] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
+    attendance: "0%",
+    pendingHomework: "0",
+    notices: "0",
+    upcomingExams: "0"
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -40,6 +50,93 @@ export default function StudentDashboard() {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching dashboard data...');
+      
+      // Fetch attendance
+      const attendanceRes = await attendanceAPI.getMyAttendance();
+      console.log('Attendance Response:', attendanceRes);
+      const attendanceData = Array.isArray(attendanceRes) ? attendanceRes : (attendanceRes?.data || []);
+      const presentCount = attendanceData.filter(a => a.status === 'Present').length;
+      const attendancePercent = attendanceData.length > 0 
+        ? Math.round((presentCount / attendanceData.length) * 100) 
+        : 0;
+      console.log('Attendance percent:', attendancePercent);
+      
+      // Fetch homework
+      const homeworkRes = await homeworkAPI.getAllHomework();
+      console.log('Homework Response:', homeworkRes);
+      const homeworkData = Array.isArray(homeworkRes) ? homeworkRes : (homeworkRes?.data || []);
+      console.log('Homework count:', homeworkData.length);
+      
+      // Fetch notices
+      const noticeRes = await noticeAPI.getAllNotices();
+      console.log('Notice Response:', noticeRes);
+      const noticeData = Array.isArray(noticeRes) ? noticeRes : (noticeRes?.notices || noticeRes?.data || []);
+      console.log('Notice count:', noticeData.length);
+      
+      // Fetch exams
+      const examRes = await examAPI.getAllExams();
+      console.log('Exam Response:', examRes);
+      const examData = Array.isArray(examRes) ? examRes : (examRes?.exams || examRes?.data || []);
+      console.log('Exam data:', examData);
+      console.log('Exam count:', examData.length);
+      
+      // Debug: Show each exam with date
+      examData.forEach((exam, index) => {
+        console.log(`Exam ${index + 1}:`, {
+          subject: exam.subject,
+          examDate: exam.examDate,
+          className: exam.className,
+          section: exam.section
+        });
+      });
+      
+      // Filter upcoming exams (examDate is in the future)
+      const now = new Date();
+      console.log('Current date:', now.toISOString());
+      
+      const upcomingExams = examData.filter(e => {
+        if (!e.examDate) {
+          console.log(`Exam "${e.subject}" has no date`);
+          return false;
+        }
+        const examDate = new Date(e.examDate);
+        console.log(`Exam "${e.subject}" date:`, examDate.toISOString(), '>', now.toISOString(), '=', examDate > now);
+        return examDate > now;
+      });
+      console.log('Upcoming exams count:', upcomingExams.length);
+      console.log('All exams count (for reference):', examData.length);
+      
+      setDashboardData({
+        attendance: `${attendancePercent}%`,
+        pendingHomework: homeworkData.length.toString(),
+        notices: noticeData.length.toString(),
+        upcomingExams: upcomingExams.length.toString()
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Set zeros on error
+      setDashboardData({
+        attendance: "0%",
+        pendingHomework: "0",
+        notices: "0",
+        upcomingExams: "0"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -56,12 +153,12 @@ export default function StudentDashboard() {
     { name: "Request for Leave", icon: <FaRegCalendarCheck /> },
   ];
 
-  // Mock data for dashboard stats
+  // Dashboard stats with API data
   const dashboardStats = [
-    { title: "Attendance", value: "92%", icon: <FaCalendarCheck />, color: "text-green-600" },
-    { title: "Pending Homework", value: "5", icon: <FaTasks />, color: "text-orange-600" },
-    { title: "Overall Grade", value: "A", icon: <FaChartLine />, color: "text-blue-600" },
-    { title: "Upcoming Exams", value: "3", icon: <FaGraduationCap />, color: "text-purple-600" },
+    { title: "Attendance", value: dashboardData.attendance, icon: <FaCalendarCheck />, color: "text-green-600" },
+    { title: "Pending Homework", value: dashboardData.pendingHomework, icon: <FaTasks />, color: "text-orange-600" },
+    { title: "Notices", value: dashboardData.notices, icon: <FaBell />, color: "text-blue-600" },
+    { title: "Upcoming Exams", value: dashboardData.upcomingExams, icon: <FaGraduationCap />, color: "text-purple-600" },
   ];
 
   const renderContent = () => {
@@ -100,63 +197,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* Quick Info Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            <motion.div
-              className="p-6 rounded-2xl shadow-sm"
-              style={{
-                backgroundColor: "var(--background-color)",
-                boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-              }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                📝 Recent Homework
-              </h3>
-              <div className="space-y-3">
-                {["Math - Algebra Problems", "English - Essay Writing", "Science - Lab Report"].map((homework, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">{homework}</p>
-                      <p className="text-sm text-gray-600">Due: Tomorrow</p>
-                    </div>
-                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">
-                      Pending
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="p-6 rounded-2xl shadow-sm"
-              style={{
-                backgroundColor: "var(--background-color)",
-                boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-              }}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                📅 Upcoming Exams
-              </h3>
-              <div className="space-y-3">
-                {["Mathematics - Unit Test", "Physics - Mid Term", "Chemistry - Lab Exam"].map((exam, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">{exam}</p>
-                      <p className="text-sm text-gray-600">Next week</p>
-                    </div>
-                    <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded">
-                      Upcoming
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+          
         </>
       );
       case "Today's Homework": return <Homework />;

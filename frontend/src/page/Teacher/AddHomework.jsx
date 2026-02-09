@@ -1,55 +1,78 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, Image as ImageIcon, X } from "lucide-react";
+import { homeworkAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 const AddHomework = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [dueDate, setDueDate] = useState("");
+  const [subject, setSubject] = useState("");
+  const [classSection, setClassSection] = useState("");
+  const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
+  useEffect(() => {
+    fetchDropdownData();
+  }, []);
+
+  const fetchDropdownData = async () => {
+    try {
+      const [subjectsRes, classesRes] = await Promise.all([
+        homeworkAPI.getTeacherSubjects(),
+        homeworkAPI.getAvailableClasses()
+      ]);
+      setSubjects(subjectsRes.subjects || []);
+      setClasses(classesRes.classes || []);
+    } catch (err) {
+      console.error('Error fetching dropdown data:', err);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleRemoveImage = () => {
-    setImage(null);
-    setPreview(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!title || !description) {
-      alert("Please fill all fields before posting homework!");
+      alert("Please fill all required fields!");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    if (image) formData.append("image", image);
-
     try {
-      const res = await fetch("http://localhost:5000/api/homework", {
-        method: "POST",
-        body: formData,
-      });
+      console.log('Current user:', user);
+      const userId = user?._id || user?.id;
+      console.log('User ID:', userId);
+      
+      if (!userId) {
+        alert('User not logged in properly. Please login again.');
+        return;
+      }
 
-      const data = await res.json();
-      alert(data.message || "Homework posted successfully!");
+      const homeworkData = {
+        title,
+        description,
+        assignedBy: userId,
+        dueDate: dueDate || undefined,
+        subject: subject || undefined,
+        classSection: classSection || undefined
+      };
+
+      console.log('Sending homework data:', homeworkData);
+      await homeworkAPI.createHomework(homeworkData);
+      alert("Homework posted successfully!");
 
       setTitle("");
       setDescription("");
-      setImage(null);
-      setPreview(null);
+      setDueDate("");
+      setSubject("");
+      setClassSection("");
     } catch (err) {
-      console.error(err);
-      alert("Error while posting homework.");
+      console.error('Full error:', err);
+      alert("Error while posting homework: " + (err.message || "Unknown error"));
     }
   };
 
@@ -74,7 +97,7 @@ const AddHomework = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Homework Title
+              Homework Title *
             </label>
             <input
               type="text"
@@ -87,7 +110,7 @@ const AddHomework = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Description
+              Description *
             </label>
             <textarea
               placeholder="Write homework details here..."
@@ -99,39 +122,48 @@ const AddHomework = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Upload Image (optional)
+              Subject (optional)
             </label>
+            <select
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+              disabled={loading}
+            >
+              <option value="">Select Subject</option>
+              {subjects.map((sub, idx) => (
+                <option key={idx} value={sub}>{sub}</option>
+              ))}
+            </select>
+          </div>
 
-            {!preview ? (
-              <div className="border-2 border-dashed border-yellow-300 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-yellow-50 transition">
-                <Upload className="w-6 h-6 text-yellow-500 mb-2" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="cursor-pointer text-sm text-gray-500"
-                />
-              </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-3 flex flex-col items-center"
-              >
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-44 h-44 object-cover rounded-xl border border-yellow-200 shadow-md"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="mt-3 flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-semibold transition"
-                >
-                  <X className="w-4 h-4" /> Remove Image
-                </button>
-              </motion.div>
-            )}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Class/Section (optional)
+            </label>
+            <select
+              value={classSection}
+              onChange={(e) => setClassSection(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+              disabled={loading}
+            >
+              <option value="">Select Class</option>
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls.label}>{cls.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Due Date (optional)
+            </label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            />
           </div>
 
           <motion.button

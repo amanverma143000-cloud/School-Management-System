@@ -1,22 +1,88 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiDownload, FiEye, FiX } from "react-icons/fi";
 import confetti from "canvas-confetti";
 import { Crown } from "lucide-react";
+import { resultAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 export default function Results() {
   const [showPreview, setShowPreview] = useState(false);
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
 
-  const results = [
-    { subject: "Mathematics", marks: 92, total: 100 },
-    { subject: "Science", marks: 87, total: 100 },
-    { subject: "English", marks: 79, total: 100 },
-    { subject: "History", marks: 85, total: 100 },
-    { subject: "Computer Science", marks: 95, total: 100 },
-  ];
+  useEffect(() => {
+    fetchResults();
+  }, [user?._id]);
 
-  const totalMarks = results.reduce((sum, r) => sum + r.marks, 0);
-  const overallPercentage = (totalMarks / (results.length * 100)) * 100;
+  const fetchResults = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('Fetching results for student...');
+      
+      const response = await resultAPI.getAllResults();
+      console.log('Results API Response:', response);
+      
+      // Handle different response formats
+      const resultData = response?.results || response?.data || response || [];
+      console.log('Results data:', resultData);
+      console.log('Results count:', resultData.length);
+      
+      // Transform API data to match component format
+      const transformedResults = resultData.map(r => ({
+        _id: r._id,
+        examName: r.examName || r.exam?.examName || 'N/A',
+        subject: r.exam?.subjectName || r.subject || 'N/A',
+        marks: r.marksObtained ?? r.marks ?? 0,
+        total: r.exam?.totalMarks ?? r.totalMarks ?? 100,
+        grade: r.grade || 'N/A',
+        studentClass: r.class || r.student?.class || user?.class || 'N/A',
+        section: r.section || r.student?.section || user?.section || 'N/A',
+        date: r.createdAt || r.exam?.examDate || 'N/A'
+      }));
+      
+      console.log('Transformed Results:', transformedResults);
+      setResults(transformedResults);
+      
+    } catch (error) {
+      console.error('Error fetching results:', error);
+      setError(error.message || 'Failed to fetch results');
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const totalMarks = results.reduce((sum, r) => sum + (r.marks || 0), 0);
+  const totalPossible = results.reduce((sum, r) => sum + (r.total || 0), 0);
+  const overallPercentage = totalPossible > 0 ? ((totalMarks / totalPossible) * 100).toFixed(2) : 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading results...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">No results found.</div>
+      </div>
+    );
+  }
 
   const handleViewResult = () => {
     setShowPreview(true);
@@ -74,7 +140,8 @@ export default function Results() {
           }}
           className="backdrop-blur-lg rounded-2xl overflow-hidden border border-yellow-300"
         >
-          <div className="grid grid-cols-3 gap-4 p-4 bg-yellow-50 border-b border-yellow-200">
+          <div className="grid grid-cols-4 gap-4 p-4 bg-yellow-50 border-b border-yellow-200">
+            <div className="text-sm font-bold text-[var(--text-secondary)]">Exam</div>
             <div className="text-sm font-bold text-[var(--text-secondary)]">Subject</div>
             <div className="text-sm font-bold text-[var(--text-secondary)]">Marks</div>
             <div className="text-sm font-bold text-[var(--text-secondary)]">Total</div>
@@ -86,8 +153,9 @@ export default function Results() {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="grid grid-cols-3 gap-4 p-4 border-b border-yellow-200"
+              className="grid grid-cols-4 gap-4 p-4 border-b border-yellow-200"
             >
+              <div className="font-semibold text-gray-600 text-sm">{r.examName || 'N/A'}</div>
               <div className="font-semibold text-gray-800">{r.subject}</div>
               <div
                 className={`font-bold ${
@@ -140,12 +208,16 @@ export default function Results() {
               </div>
 
               <div className="p-6">
-                <p className="font-semibold text-center text-[var(--text-secondary)]">Student: Rupesh Yadav</p>
-                <p className="text-center text-sm text-gray-600 mb-4">Class: BCA | Session: 2025</p>
+                <p className="font-semibold text-center text-[var(--text-secondary)]">{user?.name || 'Student'}</p>
+                <p className="text-center text-sm text-gray-600 mb-4">
+                  Class: {user?.class || results[0]?.studentClass || 'N/A'} 
+                  {results[0]?.section ? `- ${results[0].section}` : ''} | Session: 2025
+                </p>
 
                 <table className="w-full border border-yellow-200">
                   <thead className="bg-yellow-50 text-[var(--text-secondary)]">
                     <tr>
+                      <th className="p-2 text-left border border-yellow-200">Exam</th>
                       <th className="p-2 text-left border border-yellow-200">Subject</th>
                       <th className="p-2 text-center border border-yellow-200">Marks</th>
                       <th className="p-2 text-center border border-yellow-200">Total</th>
@@ -154,6 +226,7 @@ export default function Results() {
                   <tbody>
                     {results.map((r, i) => (
                       <tr key={i} className="border border-yellow-200">
+                        <td className="p-2 border border-yellow-200 text-sm text-gray-600">{r.examName || 'N/A'}</td>
                         <td className="p-2 border border-yellow-200">{r.subject}</td>
                         <td className="p-2 text-center font-bold text-yellow-600 border border-yellow-200">{r.marks}</td>
                         <td className="p-2 text-center border border-yellow-200">{r.total}</td>

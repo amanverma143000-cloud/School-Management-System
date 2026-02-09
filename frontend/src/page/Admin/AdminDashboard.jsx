@@ -90,7 +90,7 @@ export default function AdminDashboard() {
           students: Array.isArray(studentsRes) ? studentsRes : [],
           teachers: Array.isArray(teachersRes) ? teachersRes : [],
           events: Array.isArray(eventsRes) ? eventsRes : [],
-          notices: Array.isArray(noticesRes) ? noticesRes : [],
+          notices: noticesRes?.notices || (Array.isArray(noticesRes) ? noticesRes : []),
           homework: Array.isArray(homeworkRes) ? homeworkRes : [],
           loading: false,
           error: null

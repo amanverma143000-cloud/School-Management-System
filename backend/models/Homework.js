@@ -4,9 +4,12 @@ import mongoose from "mongoose";
 const homeworkSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: String,
-    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Teacher" },
-    assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
-    dueDate: Date
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "teachers" },
+    assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "students" }],
+    dueDate: Date,
+    subject: String,
+    classSection: String,
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admins", required: true }
 }, { timestamps: true });
 
-export default mongoose.model("Homework", homeworkSchema);
+export default mongoose.model("homework", homeworkSchema, "homeworks");

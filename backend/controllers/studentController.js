@@ -8,35 +8,30 @@ import Student from "../models/Student.js";
 // 📝 CREATE STUDENT - Naya student add karne ke liye
 export const createStudent = async (req, res) => {
     try {
-        // Request body se student data lekar naya student create kar rahe hain
-        const student = await Student.create(req.body);
+        const adminId = req.user.id;
+        const studentData = { ...req.body, createdBy: adminId };
+        const student = await Student.create(studentData);
         
-        // Success response bhej rahe hain
         res.status(201).json({
             message: "Student created successfully",
             student: student
         });
     } catch (error) {
-        // Agar duplicate entry hai (email ya roll number already exists)
         if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern)[0]; // Konsa field duplicate hai
+            const field = Object.keys(error.keyPattern)[0];
             return res.status(400).json({ message: `${field} already exists` });
         }
-        // Koi aur error hai to general error message bhejenge
         res.status(400).json({ message: error.message });
     }
 };
 
-// 📋 GET ALL STUDENTS - Saare students ki list lene ke liye
 export const getAllStudents = async (req, res) => {
     try {
-        // Saare students find kar rahe hain, lekin password field exclude kar rahe hain security ke liye
-        const students = await Student.find().select("-password");
+        const adminId = req.user.id;
+        const students = await Student.find({ createdBy: adminId }).select("-password");
         
-        // Students ki list return kar rahe hain
         res.status(200).json(students);
     } catch (error) {
-        // Error case mein error message bhej rahe hain
         res.status(500).json({ message: error.message });
     }
 };

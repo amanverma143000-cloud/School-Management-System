@@ -30,6 +30,8 @@ const AttendanceReport = () => {
           attendanceAPI.getAllStudentsAttendance(),
           attendanceAPI.getAllTeachersAttendance()
         ]);
+        console.log('Fetched Student Attendance:', studentAttData);
+        console.log('Fetched Teacher Attendance:', teacherAttData);
         setStudents(studentsData.data || studentsData || []);
         setTeachers(teachersData.data || teachersData || []);
         setStudentAttendance(studentAttData || []);
@@ -136,12 +138,18 @@ const AttendanceReport = () => {
       const selectedStudent = studentOptions.find(s => s.name === studentName);
       if (!selectedStudent) return;
       
+      console.log('Selected Student:', selectedStudent);
+      console.log('All Student Attendance:', studentAttendance);
+      
       // Filter attendance for selected student
       const studentAtt = studentAttendance.filter(
-        att => att.student?._id === selectedStudent.id || att.studentId === selectedStudent.id
+        att => {
+          const studentId = att.student?._id || att.student;
+          return studentId === selectedStudent.id || String(studentId) === String(selectedStudent.id);
+        }
       );
       
-      console.log('Student Attendance:', studentAtt);
+      console.log('Filtered Student Attendance:', studentAtt);
       
       if (studentAtt.length > 0) {
         const totalDays = studentAtt.length;
@@ -150,11 +158,13 @@ const AttendanceReport = () => {
         setPercentage(calculatedPercentage);
         
         // Process chart data
-        setChartData({
+        const processedData = {
           weekly: processAttendanceData(studentAtt, 'weekly'),
           monthly: processAttendanceData(studentAtt, 'monthly'),
           yearly: processAttendanceData(studentAtt, 'yearly')
-        });
+        };
+        console.log('Processed Chart Data:', processedData);
+        setChartData(processedData);
       } else {
         setPercentage(0);
         setChartData({ weekly: [], monthly: [], yearly: [] });
@@ -173,12 +183,18 @@ const AttendanceReport = () => {
       const selectedTeacher = teacherOptions.find(t => t.name === teacherName);
       if (!selectedTeacher) return;
       
+      console.log('Selected Teacher:', selectedTeacher);
+      console.log('All Teacher Attendance:', teacherAttendance);
+      
       // Filter attendance for selected teacher
       const teacherAtt = teacherAttendance.filter(
-        att => att.teacher?._id === selectedTeacher.id || att.teacherId === selectedTeacher.id
+        att => {
+          const teacherId = att.teacher?._id || att.teacher;
+          return teacherId === selectedTeacher.id || String(teacherId) === String(selectedTeacher.id);
+        }
       );
       
-      console.log('Teacher Attendance:', teacherAtt);
+      console.log('Filtered Teacher Attendance:', teacherAtt);
       
       if (teacherAtt.length > 0) {
         const totalDays = teacherAtt.length;
@@ -187,11 +203,13 @@ const AttendanceReport = () => {
         setPercentage(calculatedPercentage);
         
         // Process chart data
-        setChartData({
+        const processedData = {
           weekly: processAttendanceData(teacherAtt, 'weekly'),
           monthly: processAttendanceData(teacherAtt, 'monthly'),
           yearly: processAttendanceData(teacherAtt, 'yearly')
-        });
+        };
+        console.log('Processed Chart Data:', processedData);
+        setChartData(processedData);
       } else {
         setPercentage(0);
         setChartData({ weekly: [], monthly: [], yearly: [] });

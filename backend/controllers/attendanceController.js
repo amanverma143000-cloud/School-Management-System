@@ -1,40 +1,26 @@
-import AttendStudent from "../models/AttendStudent.js";
-import AttendTeacher from "../models/AttendTeacher.js";
+// Combined Attendance Controller - Student & Teacher
+import { 
+  addStudentAttendance, 
+  getStudentAttendance as getStudentAttendanceById,
+  getAllStudentsAttendance,
+  updateStudentAttendance,
+  deleteStudentAttendance
+} from './AttenStudentContller.js';
 
-export const getStudentAttendance = async (req, res) => {
-  try {
-    const attendance = await AttendStudent.find()
-      .populate("student", "name lastname class section");
-    res.json(attendance);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+import { 
+  addTeacherAttendance,
+  getTeacherAttendance as getTeacherAttendanceById,
+  getAllTeachersAttendance,
+  updateTeacherAttendance,
+  deleteTeacherAttendance
+} from './AttendTeacherContller.js';
 
-export const getTeacherAttendance = async (req, res) => {
-  try {
-    const attendance = await AttendTeacher.find()
-      .populate("teacher", "name subjects");
-    res.json(attendance);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// Student Attendance Exports
+export const markStudentAttendance = addStudentAttendance;
+export const getStudentAttendance = getAllStudentsAttendance;
+export { updateStudentAttendance, deleteStudentAttendance };
 
-export const markStudentAttendance = async (req, res) => {
-  try {
-    const attendance = await AttendStudent.create(req.body);
-    res.status(201).json(attendance);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-export const markTeacherAttendance = async (req, res) => {
-  try {
-    const attendance = await AttendTeacher.create(req.body);
-    res.status(201).json(attendance);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
+// Teacher Attendance Exports
+export const markTeacherAttendance = addTeacherAttendance;
+export const getTeacherAttendance = getAllTeachersAttendance;
+export { updateTeacherAttendance, deleteTeacherAttendance };

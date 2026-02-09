@@ -16,12 +16,15 @@ const teacherSchema = new mongoose.Schema(
     experience: { type: Number },                              // Kitne saal ka experience hai
     subjects: [String],                                        // Konse subjects padhate hain (array)
 
+    // Teacher ko kisne add kiya
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admins", required: true },
+
     // Teacher ke relationships with other entities
-    students: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],           // Assigned students
-    homeworkCreated: [{ type: mongoose.Schema.Types.ObjectId, ref: "Homework" }],   // Created homework
-    marksUploaded: [{ type: mongoose.Schema.Types.ObjectId, ref: "Exam" }],         // Uploaded exam marks
-    leaveRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "LeaveRequest" }], // Received leave requests
-    Attentions: [{ type: mongoose.Schema.Types.ObjectId, ref: "TeacherAttendance" }], // Attendance records
+    students: [{ type: mongoose.Schema.Types.ObjectId, ref: "students" }],           // Assigned students
+    homeworkCreated: [{ type: mongoose.Schema.Types.ObjectId, ref: "homeworks" }],   // Created homework
+    marksUploaded: [{ type: mongoose.Schema.Types.ObjectId, ref: "exams" }],         // Uploaded exam marks
+    leaveRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "leaverequests" }], // Received leave requests
+    Attentions: [{ type: mongoose.Schema.Types.ObjectId, ref: "teacherattendance" }], // Attendance records
   },
   { timestamps: true } // createdAt aur updatedAt automatically add ho jayenge
 );
@@ -43,5 +46,5 @@ teacherSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // Teacher model create kar rahe hain aur export kar rahe hain
-const Teacher = mongoose.model("Teacher", teacherSchema);
+const Teacher = mongoose.model("teachers", teacherSchema, "teachers");
 export default Teacher;

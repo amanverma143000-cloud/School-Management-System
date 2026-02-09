@@ -58,6 +58,7 @@ export const adminAPI = {
   updateAdmin: (id, adminData) => api.put(`/admin/admins/${id}`, adminData),
   deleteAdmin: (id) => api.delete(`/admin/admins/${id}`),
   getDashboardData: () => api.get('/admin/dashboard'),
+  getAdminClasses: () => api.get('/admin/classes'),
 };
 
 // ========== STUDENT APIs ==========
@@ -77,6 +78,16 @@ export const teacherAPI = {
   createTeacher: (teacherData) => api.post('/admin/teachers/teacher/add', teacherData),
   updateTeacher: (id, teacherData) => api.put(`/admin/teachers/teacher/update/${id}`, teacherData),
   deleteTeacher: (id) => api.delete(`/admin/teachers/teacher/delete/${id}`),
+  getMyStudents: () => api.get('/teacher/my-students'),
+  getMySubjects: () => api.get('/teacher/my-subjects'),
+  getMyClasses: () => api.get('/teacher/my-classes'),
+  getMySections: () => api.get('/teacher/my-sections'),
+  getMyExams: () => api.get('/teacher/my-exams'),
+  getStudentsByClass: (className, section) => {
+    const params = new URLSearchParams({ class: className });
+    if (section) params.append('section', section);
+    return api.get(`/teacher/students-by-class?${params}`);
+  },
 };
 
 // ========== CLASS APIs ==========
@@ -100,7 +111,12 @@ export const eventAPI = {
 
 // ========== NOTICE APIs ==========
 export const noticeAPI = {
-  getAllNotices: () => api.get('/admin/notices/notice/all'),
+  getAllNotices: () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = user.role?.toLowerCase() || 'student';
+    const basePath = role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student';
+    return api.get(`${basePath}/notices/notice/all`);
+  },
   getNoticeById: (id) => api.get(`/admin/notices/notice/${id}`),
   createNotice: (noticeData) => api.post('/admin/notices/notice/add', noticeData),
   updateNotice: (id, noticeData) => api.put(`/admin/notices/notice/update/${id}`, noticeData),
@@ -109,11 +125,18 @@ export const noticeAPI = {
 
 // ========== HOMEWORK APIs ==========
 export const homeworkAPI = {
-  getAllHomework: () => api.get('/admin/homework'),
-  getHomeworkById: (id) => api.get(`/admin/homework/${id}`),
-  createHomework: (homeworkData) => api.post('/admin/homework', homeworkData),
-  updateHomework: (id, homeworkData) => api.put(`/admin/homework/${id}`, homeworkData),
-  deleteHomework: (id) => api.delete(`/admin/homework/${id}`),
+  getAllHomework: () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = user.role?.toLowerCase() || 'student';
+    const basePath = role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student';
+    return api.get(`${basePath}/homework/homework/all`);
+  },
+  getHomeworkById: (id) => api.get(`/teacher/homework/homework/${id}`),
+  createHomework: (homeworkData) => api.post('/teacher/homework/homework/add', homeworkData),
+  updateHomework: (id, homeworkData) => api.put(`/teacher/homework/homework/update/${id}`, homeworkData),
+  deleteHomework: (id) => api.delete(`/teacher/homework/homework/delete/${id}`),
+  getTeacherSubjects: () => api.get('/teacher/homework/homework/teacher-subjects'),
+  getAvailableClasses: () => api.get('/teacher/homework/homework/available-classes'),
 };
 
 // ========== LEAVE APIs ==========
@@ -121,37 +144,88 @@ export const leaveAPI = {
   applyLeave: (leaveData) => api.post('/student/leave/apply', leaveData),
   getMyLeaves: () => api.get('/student/leave/my-leaves'),
   getAllLeaves: () => api.get('/admin/leaves/leave/all'),
+  getTeacherLeaves: () => api.get('/teacher/leaves/all'),
   getLeaveById: (id) => api.get(`/admin/leaves/leave/${id}`),
-  updateLeaveStatus: (id, status) => api.put(`/admin/leaves/leave/${id}`, { status }),
+  updateLeaveStatus: (id, status) => api.put(`/teacher/leaves/${id}`, { status }),
   deleteLeave: (id) => api.delete(`/admin/leaves/leave/${id}`),
 };
 
 // ========== RESULT APIs ==========
 export const resultAPI = {
-  getAllResults: () => api.get('/admin/results'),
-  getResultById: (id) => api.get(`/admin/results/${id}`),
-  createResult: (resultData) => api.post('/admin/results', resultData),
-  updateResult: (id, resultData) => api.put(`/admin/results/${id}`, resultData),
-  deleteResult: (id) => api.delete(`/admin/results/${id}`),
+  // Get all results (auto-filters by student role)
+  getAllResults: () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = user.role?.toLowerCase() || 'student';
+    const basePath = role === 'teacher' ? '/teacher' : '/student';
+    return api.get(`${basePath}/results/all`);
+  },
+  // Get result by ID
+  getResultById: (id) => api.get(`/student/results/result/${id}`),
+  // Create result (Teacher only)
+  createResult: (resultData) => api.post('/teacher/results/resultadd', resultData),
+  // Update result (Teacher only)
+  updateResult: (id, resultData) => api.put(`/teacher/results/result/${id}`, resultData),
+  // Delete result (Teacher only)
+  deleteResult: (id) => api.delete(`/teacher/results/result/${id}`),
 };
 
 // ========== EXAM APIs ==========
 export const examAPI = {
-  getAllExams: () => api.get('/admin/exams'),
-  getExamById: (id) => api.get(`/admin/exams/${id}`),
-  createExam: (examData) => api.post('/admin/exams', examData),
-  updateExam: (id, examData) => api.put(`/admin/exams/${id}`, examData),
-  deleteExam: (id) => api.delete(`/admin/exams/${id}`),
+  getAllExams: () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = user.role?.toLowerCase() || 'student';
+    const basePath = role === 'teacher' ? '/teacher' : '/student';
+    return api.get(`${basePath}/exam/exam/all`);
+  },
+  getExamById: (id) => api.get(`/teacher/exam/exam/${id}`),
+  createExam: (examData) => api.post('/teacher/exam/exam/add', examData),
+  updateExam: (id, examData) => api.put(`/teacher/exam/exam/update/${id}`, examData),
+  deleteExam: (id) => api.delete(`/teacher/exam/exam/delete/${id}`),
 };
 
 // ========== ATTENDANCE APIs ==========
 export const attendanceAPI = {
   // Student Attendance
   markStudentAttendance: (attendanceData) => api.post('/attendance/student', attendanceData),
+  
+  // Get student attendance by student ID (for logged-in student)
   getStudentAttendance: (studentId) => api.get(`/attendance/student/${studentId}`),
+  
+  // Get all students attendance (Admin/Teacher only)
   getAllStudentsAttendance: () => api.get('/attendance/student'),
+  
+  // Update student attendance
   updateStudentAttendance: (id, attendanceData) => api.put(`/attendance/student/${id}`, attendanceData),
+  
+  // Delete student attendance (Admin only)
   deleteStudentAttendance: (id) => api.delete(`/attendance/student/${id}`),
+  
+  // Get my attendance (for currently logged-in student)
+  getMyAttendance: () => {
+    // Check for user object in localStorage
+    let userId = null;
+    
+    // First try to get from 'user' JSON object
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        userId = user._id || user.userId;
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+    
+    // If not found, try individual keys
+    if (!userId) {
+      userId = localStorage.getItem('userId');
+    }
+    
+    if (userId) {
+      return api.get(`/attendance/student/${userId}`);
+    }
+    return Promise.reject(new Error('User ID not found'));
+  },
   
   // Teacher Attendance
   markTeacherAttendance: (attendanceData) => api.post('/attendance/teacher', attendanceData),

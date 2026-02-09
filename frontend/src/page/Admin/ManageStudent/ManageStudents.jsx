@@ -13,6 +13,8 @@ const ManageStudents = () => {
   const [editingId, setEditingId] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
   const [form, setForm] = useState({
     name: "",
     lastname: "",
@@ -29,7 +31,14 @@ const ManageStudents = () => {
     try {
       setLoading(true);
       const data = await studentAPI.getAllStudents();
-      setStudents(data.data || data || []);
+      const studentList = data.data || data || [];
+      setStudents(studentList);
+      
+      // Extract unique classes and sections
+      const uniqueClasses = [...new Set(studentList.map(s => s.class).filter(Boolean))];
+      const uniqueSections = [...new Set(studentList.map(s => s.section).filter(Boolean))];
+      setClasses(uniqueClasses.sort());
+      setSections(uniqueSections.sort());
     } catch (error) {
       console.error('Error fetching students:', error);
       toast.error('Failed to fetch students');
@@ -132,27 +141,84 @@ const ManageStudents = () => {
           {editingId ? "✏️ Edit Student" : "➕ Add New Student"}
         </h3>
         <form onSubmit={handleAddStudent} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { name: "name", placeholder: "First Name" },
-            { name: "lastname", placeholder: "Last Name" },
-            { name: "email", placeholder: "Email (optional)", type: "email" },
-            { name: "password", placeholder: "Password", type: "password" },
-            { name: "mobile", placeholder: "Mobile" },
-            { name: "class", placeholder: "Class" },
-            { name: "section", placeholder: "Section" },
-            { name: "rollNumber", placeholder: "Roll No" },
-          ].map((input) => (
-            <input
-              key={input.name}
-              type={input.type || "text"}
-              name={input.name}
-              placeholder={input.placeholder}
-              value={form[input.name] || ""}
-              onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              required={input.name !== "email" && input.name !== "mobile"}
-            />
-          ))}
+          <input
+            type="text"
+            name="name"
+            placeholder="First Name"
+            value={form.name || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="text"
+            name="lastname"
+            placeholder="Last Name"
+            value={form.lastname || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email (optional)"
+            value={form.email || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="text"
+            name="mobile"
+            placeholder="Mobile"
+            value={form.mobile || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <select
+            name="class"
+            value={form.class || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          >
+            <option value="">Select Class</option>
+            {classes.map((cls) => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+            <option value="new">+ Add New Class</option>
+          </select>
+          <select
+            name="section"
+            value={form.section || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          >
+            <option value="">Select Section</option>
+            {sections.map((sec) => (
+              <option key={sec} value={sec}>{sec}</option>
+            ))}
+            <option value="new">+ Add New Section</option>
+          </select>
+          <input
+            type="text"
+            name="rollNumber"
+            placeholder="Roll No"
+            value={form.rollNumber || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
 
           <div className="md:col-span-2 lg:col-span-4 flex gap-3 mt-4">
             <button

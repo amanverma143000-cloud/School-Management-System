@@ -55,6 +55,7 @@ export const protect = async (req, res, next) => {
       // ✅ SUCCESS: User info ko request object mein attach kar rahe hain
       // Ab agle functions mein req.user se user ki details mil jayengi
       req.user = user;
+      req.user.id = user._id.toString(); // Add id field for compatibility
       next(); // Next middleware/controller function par jaenge
     } else {
       // Authorization header nahi mila to error

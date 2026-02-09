@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { noticeAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthProvider";
+import { FaImage } from "react-icons/fa";
 
 const Announcements = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [isImportant, setIsImportant] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [image, setImage] = useState("");
   const [announcements, setAnnouncements] = useState([]);
   const { user } = useAuth();
 
@@ -14,11 +17,14 @@ const Announcements = () => {
     try {
       setIsLoading(true);
       const response = await noticeAPI.getAllNotices();
+      console.log('Fetch notices response:', response);
       const notices = response?.notices || [];
+      console.log('Notices array:', notices);
       setAnnouncements(notices.map(notice => ({
         id: notice._id,
         title: notice.title || "No Title",
         message: notice.description || "No Description",
+        image: notice.image || "",
         audience: notice.audience || "All",
         isImportant: notice.isImportant || false,
         createdAt: notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : "N/A"
@@ -28,6 +34,37 @@ const Announcements = () => {
       setAnnouncements([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'school_notices');
+
+    try {
+      setUploading(true);
+      console.log('Uploading image to Cloudinary...');
+      const response = await fetch('https://api.cloudinary.com/v1_1/dqhszpvxe/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      console.log('Cloudinary response:', data);
+      if (data.secure_url) {
+        setImage(data.secure_url);
+        console.log('Image URL set:', data.secure_url);
+      } else {
+        alert('Failed to get image URL from Cloudinary');
+      }
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -50,10 +87,17 @@ const Announcements = () => {
         isImportant 
       };
       
-      await noticeAPI.createNotice(noticeData);
+      if (image) {
+        noticeData.image = image;
+      }
+      
+      console.log('Sending notice data:', noticeData);
+      const response = await noticeAPI.createNotice(noticeData);
+      console.log('Create notice response:', response);
       
       setTitle("");
       setMessage("");
+      setImage("");
       setIsImportant(false);
       fetchNotices();
       alert("Announcement created successfully!");
@@ -105,6 +149,25 @@ const Announcements = () => {
             onChange={(e) => setMessage(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 h-28 resize-none"
           />
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <FaImage /> Notice Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+            {uploading && <p className="text-sm text-blue-600 mt-2">Uploading image...</p>}
+            {image && (
+              <div className="mt-3">
+                <img src={image} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+              </div>
+            )}
+          </div>
 
           {/* Importance Toggle */}
           <div className="flex items-center gap-3">

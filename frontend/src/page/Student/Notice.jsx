@@ -1,46 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, CalendarDays, X } from "lucide-react";
+import { noticeAPI } from "../../services/api";
 
 const Announcements = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const mockData = [
-      {
-        id: 1,
-        title: "Mid-Term Exam Schedule Released",
-        author: "Admin",
-        date: "2025-10-25",
-        description:
-          "The mid-term exam schedule has been uploaded. Please check the exam section for your respective subjects. Attendance is mandatory for all students.",
-        image:
-          "https://images.unsplash.com/photo-1559027615-5bdf7f3e3c55?auto=format&fit=crop&w=900&q=80",
-      },
-      {
-        id: 2,
-        title: "Holiday Notice: Diwali Break",
-        author: "Principal Office",
-        date: "2025-11-02",
-        description:
-          "School will remain closed from November 5 to November 10 due to Diwali holidays. Regular classes will resume on November 11.",
-        image:
-          "https://images.unsplash.com/photo-1606300050870-82cbbf0a2f3b?auto=format&fit=crop&w=900&q=80",
-      },
-      {
-        id: 3,
-        title: "Science Project Submission Date Extended",
-        author: "Mr. Verma (Science Dept.)",
-        date: "2025-10-28",
-        description:
-          "The submission deadline for the science model project has been extended to November 3. Make sure to attach your report files properly.",
-        image:
-          "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=900&q=80",
-      },
-    ];
-    setAnnouncements(mockData);
+    fetchNotices();
   }, []);
+
+  const fetchNotices = async () => {
+    try {
+      setIsLoading(true);
+      const response = await noticeAPI.getAllNotices();
+      console.log('Notice API Response:', response);
+      const noticesData = response.notices || response.data || response || [];
+      console.log('Notices with images:', noticesData.map(n => ({ title: n.title, image: n.image })));
+      setAnnouncements(Array.isArray(noticesData) ? noticesData : []);
+    } catch (error) {
+      console.error('Error fetching notices:', error);
+      setAnnouncements([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading notices...</div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -61,9 +55,9 @@ const Announcements = () => {
 
       {/* Cards */}
       <div className="max-w-6xl mx-auto grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {announcements.map((notice, i) => (
+        {announcements.length > 0 ? announcements.map((notice, i) => (
           <motion.div
-            key={notice.id}
+            key={notice._id || notice.id}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
@@ -77,14 +71,14 @@ const Announcements = () => {
           >
             <div className="relative">
               <img
-                src={notice.image}
+                src={notice.image || "https://images.unsplash.com/photo-1559027615-5bdf7f3e3c55?auto=format&fit=crop&w=900&q=80"}
                 alt={notice.title}
                 className="w-full h-48 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               <div className="absolute bottom-3 left-3 text-white text-sm flex items-center gap-2 font-medium">
                 <CalendarDays size={14} />
-                {notice.date}
+                {new Date(notice.createdAt || notice.date).toLocaleDateString()}
               </div>
             </div>
 
@@ -92,13 +86,22 @@ const Announcements = () => {
               <h2 className="text-lg font-bold text-gray-900">
                 {notice.title}
               </h2>
-              <p className="text-gray-500 text-sm mt-1 font-medium">By {notice.author}</p>
+              <p className="text-gray-500 text-sm mt-1 font-medium">By {notice.author || notice.createdBy?.name || "Admin"}</p>
               <p className="text-gray-700 mt-3 line-clamp-3">
                 {notice.description}
               </p>
+              {notice.isImportant && (
+                <span className="inline-block mt-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                  Important
+                </span>
+              )}
             </div>
           </motion.div>
-        ))}
+        )) : (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 text-lg">No notices available</p>
+          </div>
+        )}
       </div>
 
       {/* Modal */}
@@ -122,7 +125,7 @@ const Announcements = () => {
             >
               <div className="relative">
                 <img
-                  src={selected.image}
+                  src={selected.image || "https://images.unsplash.com/photo-1559027615-5bdf7f3e3c55?auto=format&fit=crop&w=900&q=80"}
                   alt={selected.title}
                   className="w-full h-56 object-cover"
                 />
@@ -140,9 +143,19 @@ const Announcements = () => {
                   {selected.title}
                 </h2>
                 <p className="text-sm text-gray-500 mb-3 font-medium">
-                  {selected.author} • {selected.date}
+                  {selected.author || selected.createdBy?.name || "Admin"} • {new Date(selected.createdAt || selected.date).toLocaleDateString()}
                 </p>
                 <p className="text-gray-700 leading-relaxed">{selected.description}</p>
+                {selected.isImportant && (
+                  <div className="mt-4">
+                    <span className="bg-red-100 text-red-800 text-sm px-3 py-1 rounded-full">
+                      ⚠️ Important Notice
+                    </span>
+                  </div>
+                )}
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Audience:</strong> {selected.audience || "All"}</p>
+                </div>
               </div>
             </motion.div>
           </motion.div>
