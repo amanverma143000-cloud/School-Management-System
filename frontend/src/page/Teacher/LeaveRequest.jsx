@@ -18,6 +18,7 @@ const LeaveRequests = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching teacher leaves...');
       const response = await leaveAPI.getTeacherLeaves();
       console.log('Leaves API Response:', response);
       
@@ -61,13 +62,15 @@ const LeaveRequests = () => {
   const handleConfirmLeave = async (id) => {
     try {
       setLoading(true);
-      await leaveAPI.updateLeaveStatus(id, "Approved");
+      console.log('Approving leave with ID:', id);
+      const response = await leaveAPI.updateLeaveStatus(id, "Approved");
+      console.log('Approve response:', response);
       alert("Leave approved successfully!");
       setLeaves(prev => prev.filter(l => l.id !== id));
       setSelectedLeave(null);
     } catch (err) {
       console.error("Error approving leave:", err);
-      alert("Failed to approve leave! Please try again.");
+      alert("Failed to approve leave! " + (err.message || err.error || "Please try again."));
     } finally {
       setLoading(false);
     }
@@ -76,13 +79,15 @@ const LeaveRequests = () => {
   const handleCancelLeave = async (id) => {
     try {
       setLoading(true);
-      await leaveAPI.updateLeaveStatus(id, "Rejected");
+      console.log('Rejecting leave with ID:', id);
+      const response = await leaveAPI.updateLeaveStatus(id, "Rejected");
+      console.log('Reject response:', response);
       alert("Leave rejected successfully!");
       setLeaves(prev => prev.filter(l => l.id !== id));
       setSelectedLeave(null);
     } catch (err) {
       console.error("Error rejecting leave:", err);
-      alert("Failed to reject leave! Please try again.");
+      alert("Failed to reject leave! " + (err.message || err.error || "Please try again."));
     } finally {
       setLoading(false);
     }
