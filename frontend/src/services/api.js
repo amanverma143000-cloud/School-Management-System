@@ -63,21 +63,21 @@ export const adminAPI = {
 
 // ========== STUDENT APIs ==========
 export const studentAPI = {
-  getAllStudents: () => api.get('/admin/students/student/all'),
-  getStudentById: (id) => api.get(`/admin/students/student/${id}`),
-  createStudent: (studentData) => api.post('/admin/students/student/add', studentData),
-  updateStudent: (id, studentData) => api.put(`/admin/students/student/update/${id}`, studentData),
-  deleteStudent: (id) => api.delete(`/admin/students/student/delete/${id}`),
-  getUniqueSections: () => api.get('/admin/students/student/sections'), // Sahi path
+  getAllStudents: () => api.get('/admin/students/all'),
+  getStudentById: (id) => api.get(`/admin/students/${id}`),
+  createStudent: (studentData) => api.post('/admin/students/add', studentData),
+  updateStudent: (id, studentData) => api.put(`/admin/students/update/${id}`, studentData),
+  deleteStudent: (id) => api.delete(`/admin/students/delete/${id}`),
+  getUniqueSections: () => api.get('/admin/students/sections'),
 };
 
 // ========== TEACHER APIs ==========
 export const teacherAPI = {
-  getAllTeachers: () => api.get('/admin/teachers/teacher/all'),
-  getTeacherById: (id) => api.get(`/admin/teachers/teacher/${id}`),
-  createTeacher: (teacherData) => api.post('/admin/teachers/teacher/add', teacherData),
-  updateTeacher: (id, teacherData) => api.put(`/admin/teachers/teacher/update/${id}`, teacherData),
-  deleteTeacher: (id) => api.delete(`/admin/teachers/teacher/delete/${id}`),
+  getAllTeachers: () => api.get('/admin/teachers/all'),
+  getTeacherById: (id) => api.get(`/admin/teachers/${id}`),
+  createTeacher: (teacherData) => api.post('/admin/teachers/add', teacherData),
+  updateTeacher: (id, teacherData) => api.put(`/admin/teachers/update/${id}`, teacherData),
+  deleteTeacher: (id) => api.delete(`/admin/teachers/delete/${id}`),
   getMyStudents: () => api.get('/teacher/my-students'),
   getMySubjects: () => api.get('/teacher/my-subjects'),
   getMyClasses: () => api.get('/teacher/my-classes'),
@@ -100,6 +100,7 @@ export const classAPI = {
   createPredefinedClasses: () => api.post('/admin/classes/predefined'),
   deleteAllClasses: () => api.delete('/admin/classes/all'),
 };
+
 // ========== EVENT APIs ==========
 export const eventAPI = {
   getAllEvents: () => api.get('/admin/events'),
@@ -115,12 +116,12 @@ export const noticeAPI = {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user.role?.toLowerCase() || 'student';
     const basePath = role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student';
-    return api.get(`${basePath}/notices/notice/all`);
+    return api.get(`${basePath}/notices/all`);
   },
-  getNoticeById: (id) => api.get(`/admin/notices/notice/${id}`),
-  createNotice: (noticeData) => api.post('/admin/notices/notice/add', noticeData),
-  updateNotice: (id, noticeData) => api.put(`/admin/notices/notice/update/${id}`, noticeData),
-  deleteNotice: (id) => api.delete(`/admin/notices/notice/delete/${id}`),
+  getNoticeById: (id) => api.get(`/admin/notices/${id}`),
+  createNotice: (noticeData) => api.post('/admin/notices/add', noticeData),
+  updateNotice: (id, noticeData) => api.put(`/admin/notices/${id}`, noticeData),
+  deleteNotice: (id) => api.delete(`/admin/notices/${id}`),
 };
 
 // ========== HOMEWORK APIs ==========
@@ -128,26 +129,28 @@ export const homeworkAPI = {
   getAllHomework: () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user.role?.toLowerCase() || 'student';
-    const basePath = role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student';
-    return api.get(`${basePath}/homework/homework/all`);
+    let basePath = '/student';
+    if (role === 'teacher') basePath = '/teacher';
+    else if (role === 'admin') basePath = '/admin';
+    return api.get(`${basePath}/homework/all`);
   },
-  getHomeworkById: (id) => api.get(`/teacher/homework/homework/${id}`),
-  createHomework: (homeworkData) => api.post('/teacher/homework/homework/add', homeworkData),
-  updateHomework: (id, homeworkData) => api.put(`/teacher/homework/homework/update/${id}`, homeworkData),
-  deleteHomework: (id) => api.delete(`/teacher/homework/homework/delete/${id}`),
-  getTeacherSubjects: () => api.get('/teacher/homework/homework/teacher-subjects'),
-  getAvailableClasses: () => api.get('/teacher/homework/homework/available-classes'),
+  getHomeworkById: (id) => api.get(`/teacher/homework/${id}`),
+  createHomework: (homeworkData) => api.post('/teacher/homework/add', homeworkData),
+  updateHomework: (id, homeworkData) => api.put(`/teacher/homework/${id}`, homeworkData),
+  deleteHomework: (id) => api.delete(`/teacher/homework/${id}`),
+  getTeacherSubjects: () => api.get('/teacher/homework/teacher-subjects'),
+  getAvailableClasses: () => api.get('/teacher/homework/available-classes'),
 };
 
 // ========== LEAVE APIs ==========
 export const leaveAPI = {
   applyLeave: (leaveData) => api.post('/student/leave/apply', leaveData),
   getMyLeaves: () => api.get('/student/leave/my-leaves'),
-  getAllLeaves: () => api.get('/admin/leaves/leave/all'),
-  getTeacherLeaves: () => api.get('/teacher/leaves/all'),
-  getLeaveById: (id) => api.get(`/admin/leaves/leave/${id}`),
+  getAllLeaves: () => api.get('/admin/leaves/all'),
+  getTeacherLeaves: () => api.get('/teacher/leaves/teacher-leaves'),
+  getLeaveById: (id) => api.get(`/admin/leaves/${id}`),
   updateLeaveStatus: (id, status) => api.put(`/teacher/leaves/${id}`, { status }),
-  deleteLeave: (id) => api.delete(`/admin/leaves/leave/${id}`),
+  deleteLeave: (id) => api.delete(`/admin/leaves/${id}`),
 };
 
 // ========== RESULT APIs ==========
@@ -156,17 +159,19 @@ export const resultAPI = {
   getAllResults: () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user.role?.toLowerCase() || 'student';
-    const basePath = role === 'teacher' ? '/teacher' : '/student';
+    let basePath = '/student';
+    if (role === 'teacher') basePath = '/teacher';
+    else if (role === 'admin') basePath = '/admin';
     return api.get(`${basePath}/results/all`);
   },
   // Get result by ID
-  getResultById: (id) => api.get(`/student/results/result/${id}`),
+  getResultById: (id) => api.get(`/student/results/${id}`),
   // Create result (Teacher only)
-  createResult: (resultData) => api.post('/teacher/results/resultadd', resultData),
+  createResult: (resultData) => api.post('/teacher/results/add', resultData),
   // Update result (Teacher only)
-  updateResult: (id, resultData) => api.put(`/teacher/results/result/${id}`, resultData),
+  updateResult: (id, resultData) => api.put(`/teacher/results/${id}`, resultData),
   // Delete result (Teacher only)
-  deleteResult: (id) => api.delete(`/teacher/results/result/${id}`),
+  deleteResult: (id) => api.delete(`/teacher/results/${id}`),
 };
 
 // ========== EXAM APIs ==========
@@ -175,12 +180,12 @@ export const examAPI = {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user.role?.toLowerCase() || 'student';
     const basePath = role === 'teacher' ? '/teacher' : '/student';
-    return api.get(`${basePath}/exam/exam/all`);
+    return api.get(`${basePath}/exam/all`);
   },
-  getExamById: (id) => api.get(`/teacher/exam/exam/${id}`),
-  createExam: (examData) => api.post('/teacher/exam/exam/add', examData),
-  updateExam: (id, examData) => api.put(`/teacher/exam/exam/update/${id}`, examData),
-  deleteExam: (id) => api.delete(`/teacher/exam/exam/delete/${id}`),
+  getExamById: (id) => api.get(`/teacher/exam/${id}`),
+  createExam: (examData) => api.post('/teacher/exam/add', examData),
+  updateExam: (id, examData) => api.put(`/teacher/exam/${id}`, examData),
+  deleteExam: (id) => api.delete(`/teacher/exam/${id}`),
 };
 
 // ========== ATTENDANCE APIs ==========

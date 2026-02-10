@@ -1,48 +1,13 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import jsPDF from "jspdf"; // 📄 for PDF download
+import jsPDF from "jspdf";
+import { resultAPI } from "../../services/api";
 
 const ResultOverview = () => {
-  // ✅ Dummy Data (Replace later with API data)
-  const [resultData, setResultData] = useState([
-    {
-      _id: 1,
-      studentName: "Aman Verma",
-      rollNo: "101",
-      className: "10th A",
-      subject: "Mathematics",
-      date: "2025-11-01",
-      marks: 88,
-      total: 100,
-      grade: "A",
-      remarks: "Excellent performance",
-    },
-    {
-      _id: 2,
-      studentName: "Riya Sharma",
-      rollNo: "102",
-      className: "10th A",
-      subject: "Science",
-      date: "2025-11-01",
-      marks: 76,
-      total: 100,
-      grade: "B+",
-      remarks: "Good understanding of concepts",
-    },
-    {
-      _id: 3,
-      studentName: "Vivek Kumar",
-      rollNo: "103",
-      className: "9th B",
-      subject: "English",
-      date: "2025-10-30",
-      marks: 69,
-      total: 100,
-      grade: "B",
-      remarks: "Needs to improve writing skills",
-    },
-  ]);
+  const [resultData, setResultData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // ✅ Filters
   const [selectedDate, setSelectedDate] = useState("");
@@ -50,6 +15,51 @@ const ResultOverview = () => {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedResult, setSelectedResult] = useState(null);
+
+  // ✅ Fetch data from API
+  useEffect(() => {
+    fetchResults();
+  }, []);
+
+  const fetchResults = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await resultAPI.getAllResults();
+      console.log('Results API Response:', response);
+      
+      // Handle response - could be array directly or object with results property
+      let resultsArray = [];
+      if (Array.isArray(response)) {
+        resultsArray = response;
+      } else if (response && Array.isArray(response.results)) {
+        resultsArray = response.results;
+      } else if (response && Array.isArray(response.data)) {
+        resultsArray = response.data;
+      }
+      
+      // Format the data for the frontend
+      const formattedData = resultsArray.map(result => ({
+        _id: result._id,
+        studentName: result.student?.name ? `${result.student.name} ${result.student.lastname || ""}` : "Unknown",
+        rollNo: result.student?.rollNumber || "N/A",
+        className: result.class ? `${result.class}${result.section ? '-' + result.section : ''}` : "Not specified",
+        subject: result.subject || "Not specified",
+        date: result.createdAt ? new Date(result.createdAt).toLocaleDateString() : "N/A",
+        marks: result.marksObtained || 0,
+        total: result.totalMarks || 100,
+        grade: result.grade || "N/A",
+        remarks: result.remarks || ""
+      }));
+      
+      setResultData(formattedData);
+    } catch (err) {
+      console.error('Error fetching results:', err);
+      setError("Failed to load results: " + (err.message || err.error || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Filter logic
   const filteredResults = resultData.filter((item) => {
@@ -87,6 +97,20 @@ const ResultOverview = () => {
     doc.save(`${result.studentName}_Result.pdf`);
   };
 
+  // ✅ Delete handler
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this result?")) {
+      try {
+        await resultAPI.deleteResult(id);
+        setResultData((prev) => prev.filter((item) => item._id !== id));
+        alert("Result deleted successfully!");
+      } catch (err) {
+        console.error('Error deleting result:', err);
+        alert("Failed to delete result!");
+      }
+    }
+  };
+
   // ✅ Close Modal
   const handleCloseModal = () => setSelectedResult(null);
 
@@ -95,6 +119,10 @@ const ResultOverview = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">🎓 Result Overview</h2>
+
+        {/* Loading/Error State */}
+        {loading && <span className="text-purple-600">Loading...</span>}
+        {error && <span className="text-red-600">{error}</span>}
 
         {/* Filter Section */}
         <div className="flex flex-wrap items-center gap-3 mt-4 sm:mt-0">
@@ -170,11 +198,15 @@ const ResultOverview = () => {
 
       {/* Cards Section */}
       <div className="rounded-xl overflow-y-auto max-h-[70vh] p-5">
-        {filteredResults.length > 0 ? (
+        {loading ? (
+          <p className="text-gray-500 text-center p-4">Loading results...</p>
+        ) : error ? (
+          <p className="text-red-500 text-center p-4">{error}</p>
+        ) : filteredResults.length > 0 ? (
           <div className="flex flex-col gap-5">
             {filteredResults.map((item, index) => (
               <motion.div
-                key={index}
+                key={item._id || index}
                 whileHover={{ scale: 1.02, y: -3 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15 }}
                 style={{ background: "var(--card-bg)" }}
@@ -211,13 +243,20 @@ const ResultOverview = () => {
                   >
                     ⬇ Download
                   </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => handleDelete(item._id)}
+                    className="px-3 py-1.5 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+                  >
+                    🗑 Delete
+                  </motion.button>
                 </div>
               </motion.div>
             ))}
           </div>
         ) : (
           <p className="text-gray-500 text-center p-4">
-            No results found for this filter.
+            No results found. Upload marks first using the "Upload Marks" page.
           </p>
         )}
       </div>
@@ -245,6 +284,9 @@ const ResultOverview = () => {
               </p>
               <p>
                 <b>Class:</b> {selectedResult.className}
+              </p>
+              <p>
+                <b>Roll No:</b> {selectedResult.rollNo}
               </p>
               <p>
                 <b>Subject:</b> {selectedResult.subject}

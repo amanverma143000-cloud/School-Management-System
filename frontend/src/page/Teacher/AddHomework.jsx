@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Image as ImageIcon, X } from "lucide-react";
+import { FileText, Image as ImageIcon } from "lucide-react";
 import { homeworkAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthProvider";
 
@@ -9,7 +9,8 @@ const AddHomework = () => {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [subject, setSubject] = useState("");
-  const [classSection, setClassSection] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +26,16 @@ const AddHomework = () => {
         homeworkAPI.getTeacherSubjects(),
         homeworkAPI.getAvailableClasses()
       ]);
-      setSubjects(subjectsRes.subjects || []);
-      setClasses(classesRes.classes || []);
+      console.log('Subjects API Response:', subjectsRes);
+      console.log('Classes API Response:', classesRes);
+      
+      // Handle subjects - could be array directly or object with subjects property
+      const subjectsData = Array.isArray(subjectsRes) ? subjectsRes : subjectsRes?.subjects || [];
+      setSubjects(subjectsData);
+      
+      // Handle classes - the API returns array of class objects with name, section, grade, label
+      const classesData = Array.isArray(classesRes) ? classesRes : classesRes?.data || classesRes?.classes || [];
+      setClasses(classesData);
     } catch (err) {
       console.error('Error fetching dropdown data:', err);
     } finally {
@@ -37,8 +46,8 @@ const AddHomework = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !description) {
-      alert("Please fill all required fields!");
+    if (!title || !dueDate || !subject || !selectedClass || !selectedSection) {
+      alert("Please fill all required fields: Title, Due Date, Subject, Class, and Section!");
       return;
     }
 
@@ -56,24 +65,38 @@ const AddHomework = () => {
         title,
         description,
         assignedBy: userId,
-        dueDate: dueDate || undefined,
-        subject: subject || undefined,
-        classSection: classSection || undefined
+        dueDate,
+        subject,
+        class: selectedClass,
+        section: selectedSection
       };
 
       console.log('Sending homework data:', homeworkData);
-      await homeworkAPI.createHomework(homeworkData);
+      const response = await homeworkAPI.createHomework(homeworkData);
+      console.log('Homework created response:', response);
       alert("Homework posted successfully!");
 
+      // Reset form
       setTitle("");
       setDescription("");
       setDueDate("");
       setSubject("");
-      setClassSection("");
+      setSelectedClass("");
+      setSelectedSection("");
     } catch (err) {
       console.error('Full error:', err);
-      alert("Error while posting homework: " + (err.message || "Unknown error"));
+      alert("Error while posting homework: " + (err.message || err.error || "Unknown error"));
     }
+  };
+
+  // Extract unique classes and sections from the classes array
+  const uniqueClasses = [...new Set(classes.map(c => c.name || c.grade))].filter(Boolean).sort();
+  
+  const getSectionsForClass = (className) => {
+    return classes
+      .filter(c => (c.name || c.grade) === className)
+      .map(c => c.section)
+      .filter(Boolean);
   };
 
   return (
@@ -110,7 +133,7 @@ const AddHomework = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Description *
+              Description
             </label>
             <textarea
               placeholder="Write homework details here..."
@@ -122,7 +145,7 @@ const AddHomework = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Subject (optional)
+              Subject *
             </label>
             <select
               value={subject}
@@ -137,26 +160,50 @@ const AddHomework = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Class/Section (optional)
-            </label>
-            <select
-              value={classSection}
-              onChange={(e) => setClassSection(e.target.value)}
-              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
-              disabled={loading}
-            >
-              <option value="">Select Class</option>
-              {classes.map((cls) => (
-                <option key={cls._id} value={cls.label}>{cls.label}</option>
-              ))}
-            </select>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Class *
+              </label>
+              <select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedSection("");
+                }}
+                className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+                disabled={loading}
+              >
+                <option value="">Select Class</option>
+                {uniqueClasses.map((cls, idx) => (
+                  <option key={idx} value={cls}>{cls}</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedClass && (
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Section *
+                </label>
+                <select
+                  value={selectedSection}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+                  disabled={loading}
+                >
+                  <option value="">Section</option>
+                  {getSectionsForClass(selectedClass).map((sec, idx) => (
+                    <option key={idx} value={sec}>{sec}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Due Date (optional)
+              Due Date *
             </label>
             <input
               type="date"

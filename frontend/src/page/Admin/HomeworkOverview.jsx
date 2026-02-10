@@ -1,56 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
+import { homeworkAPI } from "../../services/api";
 
 const HomeworkOverview = () => {
-  // ✅ Dummy Data (API ke bad ye remove hoga)
-  const [homeworkData, setHomeworkData] = useState([
-    {
-      _id: 1,
-      subject: "English Grammar",
-      teacher: "Mr. Rajesh Sharma",
-      date: "2025-10-29",
-      className: "8th A",
-      description: "Complete the worksheet on Tenses and Active Voice.",
-      imageUrl: "https://picsum.photos/800/500?random=1",
-    },
-    {
-      _id: 2,
-      subject: "Mathematics",
-      teacher: "Ms. Kavita Singh",
-      date: "2025-10-29",
-      className: "9th B",
-      description: "Solve problems from Chapter 6 (Linear Equations).",
-      imageUrl: "https://picsum.photos/800/500?random=2",
-    },
-    {
-      _id: 3,
-      subject: "Science",
-      teacher: "Mr. Rohan Patel",
-      date: "2025-10-30",
-      className: "10th A",
-      description: "Write notes on 'Human Circulatory System'.",
-      imageUrl: "https://picsum.photos/800/500?random=3",
-    },
-    {
-      _id: 4,
-      subject: "History",
-      teacher: "Mr. Vivek Mehta",
-      date: "2025-10-31",
-      className: "7th A",
-      description: "Read and summarize the Revolt of 1857.",
-      imageUrl: "https://picsum.photos/800/500?random=4",
-    },
-    {
-      _id: 5,
-      subject: "Computer Science",
-      teacher: "Mr. Pankaj Kumar",
-      date: "2025-11-01",
-      className: "10th B",
-      description: "Prepare a note on Database Management System.",
-      imageUrl: "https://picsum.photos/800/500?random=5",
-    },
-  ]);
+  const [homeworkData, setHomeworkData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // ✅ Filters ke state
   const [selectedDate, setSelectedDate] = useState("");
@@ -59,15 +15,48 @@ const HomeworkOverview = () => {
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // ✅ Ye jagah par future me API se data fetch hoga
-  /*
+  // ✅ Fetch data from API
   useEffect(() => {
-    fetch("http://localhost:5000/api/homework")  // <-- your backend API URL
-      .then((res) => res.json())
-      .then((data) => setHomeworkData(data))
-      .catch((err) => console.error(err));
+    fetchHomework();
   }, []);
-  */
+
+  const fetchHomework = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await homeworkAPI.getAllHomework();
+      console.log('Homework API Response:', response);
+      
+      // Handle response - could be array directly or object with data property
+      let homeworkArray = [];
+      if (Array.isArray(response)) {
+        homeworkArray = response;
+      } else if (response && Array.isArray(response.data)) {
+        homeworkArray = response.data;
+      } else if (response && Array.isArray(response.homeworks)) {
+        homeworkArray = response.homeworks;
+      }
+      
+      // Format the data for the frontend
+      const formattedData = homeworkArray.map(hw => ({
+        _id: hw._id,
+        subject: hw.subject || "Not specified",
+        teacher: hw.assignedBy?.name || "Unknown Teacher",
+        date: hw.dueDate ? new Date(hw.dueDate).toLocaleDateString() : "No due date",
+        className: hw.classSection || "Not specified",
+        description: hw.description || "",
+        imageUrl: hw.image || null,
+        createdAt: hw.createdAt
+      }));
+      
+      setHomeworkData(formattedData);
+    } catch (err) {
+      console.error('Error fetching homework:', err);
+      setError("Failed to load homework: " + (err.message || err.error || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Filter logic (multi filter)
   const filteredHomework = homeworkData.filter((item) => {
@@ -80,8 +69,17 @@ const HomeworkOverview = () => {
   });
 
   // ✅ Delete handler
-  const handleDelete = (id) => {
-    setHomeworkData((prev) => prev.filter((item) => item._id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this homework?")) {
+      try {
+        await homeworkAPI.deleteHomework(id);
+        setHomeworkData((prev) => prev.filter((item) => item._id !== id));
+        alert("Homework deleted successfully!");
+      } catch (err) {
+        console.error('Error deleting homework:', err);
+        alert("Failed to delete homework!");
+      }
+    }
   };
 
   // ✅ View handler
@@ -106,6 +104,10 @@ const HomeworkOverview = () => {
         <h2 className="text-2xl font-bold text-slate-800">
           📚 Homework Overview
         </h2>
+
+        {/* Loading/Error State */}
+        {loading && <span className="text-purple-600">Loading...</span>}
+        {error && <span className="text-red-600">{error}</span>}
 
         {/* Filter Section */}
         <div className="flex flex-wrap items-center gap-3 mt-4 sm:mt-0">
@@ -180,17 +182,19 @@ const HomeworkOverview = () => {
       </div>
 
       {/* Scrollable Cards Section */}
-      <div className="rounded-xl overflow-y-auto max-h-[70vh] p-5 ">
-  {filteredHomework.length > 0 ? (
-    <div className="flex flex-col gap-5">
-      {filteredHomework.map((item, index) => (
-        <motion.div
-          key={index}
-          whileHover={{ scale: 1.02, y: -3 }} // thoda upar uthta hua feel
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          style={{background:"var(--card-bg)"}}
-          className="border border-gray-100 rounded-xl shadow-2xl hover:border-transparent  p-5"
-        >
+      <div className="rounded-xl overflow-y-auto max-h-[70vh] p-5">
+        {loading ? (
+          <p className="text-gray-500 text-center p-4">Loading homework...</p>
+        ) : filteredHomework.length > 0 ? (
+          <div className="flex flex-col gap-5">
+            {filteredHomework.map((item, index) => (
+              <motion.div
+                key={item._id || index}
+                whileHover={{ scale: 1.02, y: -3 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                style={{background:"var(--card-bg)"}}
+                className="border border-gray-100 rounded-xl shadow-2xl hover:border-transparent  p-5"
+              >
                 {/* Card Content */}
                 <div className="flex flex-wrap items-center justify-between text-gray-700 gap-3 sm:gap-4">
                   <p className="font-semibold text-purple-700 text-lg">
@@ -207,13 +211,15 @@ const HomeworkOverview = () => {
 
                 {/* Buttons */}
                 <div className="mt-4 flex gap-3 justify-end">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => handleView(item.imageUrl)}
-                    className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
-                  >
-                    👁 View
-                  </motion.button>
+                  {item.imageUrl && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => handleView(item.imageUrl)}
+                      className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                    >
+                      👁 View
+                    </motion.button>
+                  )}
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     onClick={() => handleDelete(item._id)}
