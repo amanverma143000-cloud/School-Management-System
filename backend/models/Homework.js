@@ -9,7 +9,7 @@ const homeworkSchema = new mongoose.Schema({
     dueDate: Date,
     subject: String,
     classSection: String,
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admins", required: true }
+    createdBy: { type: mongoose.Schema.Types.ObjectId, required: true }
 }, { timestamps: true });
 
 export default mongoose.model("homework", homeworkSchema, "homeworks");

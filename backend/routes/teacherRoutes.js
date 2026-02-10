@@ -25,10 +25,10 @@ router.get("/my-exams", protect, authorizeRoles("Teacher"), getTeacherExams);
 
 // ========== Admin Teacher Management Routes ==========
 // These routes are for admins to manage teachers
-router.post("/admin/teachers/add", protect, authorizeRoles("Admin"), createTeacher);
-router.get("/admin/teachers/all", protect, authorizeRoles("Admin"), getAllTeachers);
-router.get("/admin/teachers/:id", protect, authorizeRoles("Admin"), getTeacherById);
-router.put("/admin/teachers/update/:id", protect, authorizeRoles("Admin"), updateTeacher);
-router.delete("/admin/teachers/delete/:id", protect, authorizeRoles("Admin"), deleteTeacher);
+router.post("/add", protect, authorizeRoles("Admin"), createTeacher);
+router.get("/all", protect, authorizeRoles("Admin"), getAllTeachers);
+router.get("/:id", protect, authorizeRoles("Admin"), getTeacherById);
+router.put("/update/:id", protect, authorizeRoles("Admin"), updateTeacher);
+router.delete("/delete/:id", protect, authorizeRoles("Admin"), deleteTeacher);
 
 export default router;

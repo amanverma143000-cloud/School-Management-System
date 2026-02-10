@@ -1,8 +1,9 @@
 import express from "express";
-import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
+import { protect } from "../middlewares/authMiddleware.js";
 import {
   createHomework,
   getAllHomework,
+  getHomeworkById,
   updateHomework,
   deleteHomework,
   getTeacherSubjects,
@@ -11,19 +12,14 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect); // Saare routes protected hain
 
-// ========== Teacher Routes (Create, Update, Delete) ==========
-router.post("/homework/add", authorizeRoles("Teacher"), createHomework);
-router.put("/homework/update/:id", authorizeRoles("Teacher"), updateHomework);
-router.delete("/homework/delete/:id", authorizeRoles("Teacher"), deleteHomework);
-
-// Teacher-specific routes
-router.get("/homework/teacher-subjects", authorizeRoles("Teacher"), getTeacherSubjects);
-router.get("/homework/available-classes", authorizeRoles("Teacher"), getAvailableClasses);
-
-// ========== Shared Routes (View) ==========
-// Both Teacher and Student can view homework
-router.get("/homework/all", getAllHomework);
+router.post("/add", createHomework);
+router.get("/all", getAllHomework);
+router.get("/teacher-subjects", getTeacherSubjects);
+router.get("/available-classes", getAvailableClasses);
+router.get("/:id", getHomeworkById);
+router.put("/:id", updateHomework);
+router.delete("/:id", deleteHomework);
 
 export default router;

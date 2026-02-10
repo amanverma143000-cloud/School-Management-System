@@ -31,8 +31,8 @@ export const createTeacher = async (req, res) => {
 
 export const getAllTeachers = async (req, res) => {
   try {
-    const adminId = req.user.id;
-    const teachers = await Teacher.find({ createdBy: adminId });
+    // Return all teachers for admin dashboard
+    const teachers = await Teacher.find().select('-password');
     res.status(200).json(teachers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -51,19 +51,27 @@ export const getTeacherById = async (req, res) => {
 };
 
 // Get Teacher's Assigned Students
-// First find classes where teacher is classTeacher, then get students from those classes
+// Modified to return ALL students for attendance marking purposes
 export const getTeacherStudents = async (req, res) => {
   try {
     const teacherId = req.user._id || req.user.id;
     
-    // Find classes where this teacher is the classTeacher
+    // First, try to get students from classes where teacher is classTeacher
     const classes = await Class.find({ classTeacher: teacherId });
     const classIds = classes.map(c => c._id);
     
-    // Get all students from these classes
-    const students = await Student.find({ 
-      _id: { $in: classes.flatMap(c => c.students) }
-    }).select('name lastname class section rollNumber email');
+    let students;
+    
+    if (classIds.length > 0) {
+      // Get students from assigned classes
+      students = await Student.find({ 
+        _id: { $in: classes.flatMap(c => c.students) }
+      }).select('name lastname class section rollNumber email');
+    } else {
+      // If no classes assigned, return ALL students for attendance marking
+      students = await Student.find()
+        .select('name lastname class section rollNumber email');
+    }
     
     res.status(200).json(students);
   } catch (error) {
@@ -91,13 +99,23 @@ export const getTeacherSubjects = async (req, res) => {
 };
 
 // Get Teacher's Available Classes
+// Modified to return ALL classes if no classes are assigned
 export const getTeacherClasses = async (req, res) => {
   try {
     const teacherId = req.user._id || req.user.id;
     
     // Find classes where this teacher is the classTeacher
     const classes = await Class.find({ classTeacher: teacherId });
-    const classNames = classes.map(c => c.name);
+    
+    let classNames;
+    
+    if (classes.length > 0) {
+      classNames = classes.map(c => c.name);
+    } else {
+      // If no classes assigned, return ALL classes for teacher to use
+      const allClasses = await Class.find({}, 'name');
+      classNames = allClasses.map(c => c.name);
+    }
     
     res.status(200).json(classNames.sort());
   } catch (error) {

@@ -15,12 +15,12 @@ const router = express.Router();
 router.use(protect);
 
 // ========== Teacher Routes (Create, Update, Delete) ==========
-router.post("/resultadd", authorizeRoles("Teacher"), postExamResult);
-router.put("/result/:id", authorizeRoles("Teacher"), updateExamResult);
-router.delete("/result/:id", authorizeRoles("Teacher"), deleteExamResult);
+router.post("/add", authorizeRoles("Teacher"), postExamResult);
+router.put("/:id", authorizeRoles("Teacher"), updateExamResult);
+router.delete("/:id", authorizeRoles("Teacher"), deleteExamResult);
 
 // ========== Teacher Routes (View own results) ==========
-router.get("/resultget", authorizeRoles("Teacher"), getAllExamResults);
+router.get("/my-results", authorizeRoles("Teacher"), getAllExamResults);
 
 // ========== Shared Routes (View) ==========
 // Both Teacher and Student can view results

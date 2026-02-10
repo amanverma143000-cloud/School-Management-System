@@ -26,17 +26,17 @@ router.get("/test", async (req, res) => {
 });
 
 // Sections route - Teacher aur Admin dono access kar sakte hain
-router.get("/student/sections", protect, authorizeRoles("Admin", "Teacher"), getUniqueSections);
+router.get("/sections", protect, authorizeRoles("Admin", "Teacher"), getUniqueSections);
 
 // All student management routes (admin-only)
 router.use(protect);                 // Login required
 router.use(authorizeRoles("Admin")); // Only Admin can manage students
 
-// Student CRUD operations with /student/ prefix to match frontend expectations
-router.post("/student/add", createStudent);           // Create student
-router.get("/student/all", getAllStudents);          // Get all students
-router.get("/student/:id", getStudentById);           // Get single student
-router.put("/student/update/:id", updateStudent);     // Update student
-router.delete("/student/delete/:id", deleteStudent);  // Delete student
+// Student CRUD operations
+router.post("/add", createStudent);           // Create student
+router.get("/all", getAllStudents);          // Get all students
+router.get("/:id", getStudentById);           // Get single student
+router.put("/update/:id", updateStudent);     // Update student
+router.delete("/delete/:id", deleteStudent);  // Delete student
 
 export default router;

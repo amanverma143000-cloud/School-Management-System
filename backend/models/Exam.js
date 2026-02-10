@@ -19,4 +19,4 @@ const examSchema = new mongoose.Schema({
   ]
 }, { timestamps: true });
 
-export default mongoose.model("exam", examSchema, "exams");
+export default mongoose.model("Exam", examSchema, "exams");

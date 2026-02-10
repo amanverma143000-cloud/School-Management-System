@@ -42,9 +42,7 @@ export const getAllNotices = async (req, res) => {
     const userRole = req.user.role;
     
     let query = {};
-    if (userRole === 'Admin') {
-      query = { createdBy: userId };
-    }
+    // Admin sees all notices, others see all notices too (no filter needed)
     // Teacher and Student can see all notices
     
     const notices = await Notice.find(query).sort({ createdAt: -1 });

@@ -6,19 +6,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 
 // Import all models to register them with mongoose
-import Student from "./models/Student.js";
-import Teacher from "./models/Teacher.js";
-import Admin from "./models/Admin.js";
-import Exam from "./models/Exam.js";
-import ExamResult from "./models/ExamResult.js";
-import Attendance from "./models/AttendStudent.js";
-import TeacherAttendance from "./models/AttendTeacher.js";
-import Homework from "./models/Homework.js";
-import Notice from "./models/Notice.js";
-import Event from "./models/Event.js";
-import Class from "./models/Class.js";
-import LeaveRequestModel from "./models/LeaveRequest.js";
-import Holiday from "./models/Holiday.js";
+
 
 // Saare route files ko import kar rahe hain - ye different features ke liye alag-alag routes hain
 import adminRoutes from "./routes/adminRoutes.js";           // Admin ke liye routes
