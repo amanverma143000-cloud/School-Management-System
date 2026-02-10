@@ -1,24 +1,58 @@
-import React, { useState } from "react";
-import { useGetStudentLeavesQuery } from "../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { leaveAPI } from "../../services/api";
 
 const LeaveManagement = () => {
-  // ✅ सभी hooks सबसे ऊपर
-  const { data: apiLeaves = [], isLoading } = useGetStudentLeavesQuery();
-  const [filter, setFilter] = useState("All"); // ✅ यहाँ move किया
+  const [isLoading, setIsLoading] = useState(true);
+  const [leaves, setLeaves] = useState([]);
+  const [filter, setFilter] = useState("All");
 
-  // Transform API data - conditional check के साथ
-  const leaves = isLoading ? [] : apiLeaves.map(leave => ({
-    id: leave._id,
-    studentName: leave.requester?.name + " " + leave.requester?.lastname || "Unknown Student",
-    class: leave.requester?.class + " - " + leave.requester?.section || "Unknown Class",
-    from: new Date(leave.fromDate).toLocaleDateString(),
-    to: new Date(leave.toDate).toLocaleDateString(),
-    reason: leave.reason,
-    status: leave.status,
-    teacher: leave.teacher?.name || "Unknown Teacher",
-  }));
+  const fetchLeaves = async () => {
+    try {
+      setIsLoading(true);
+      const response = await leaveAPI.getAllLeaves();
+      console.log("API Response:", response);
+      const apiLeaves = Array.isArray(response) ? response : [];
+      setLeaves(apiLeaves.map(leave => {
+        console.log("Leave requester:", leave.requester);
+        return {
+          id: leave._id,
+          studentName: leave.requester?.name && leave.requester?.lastname 
+            ? `${leave.requester.name} ${leave.requester.lastname}` 
+            : "N/A",
+          class: leave.requester?.class && leave.requester?.section
+            ? `${leave.requester.class} - ${leave.requester.section}`
+            : "N/A",
+          from: new Date(leave.fromDate).toLocaleDateString(),
+          to: new Date(leave.toDate).toLocaleDateString(),
+          reason: leave.reason,
+          status: leave.status,
+          teacher: leave.teacher?.name || "Unknown Teacher",
+        };
+      }));
+    } catch (err) {
+      console.error("Error fetching leaves:", err);
+      setLeaves([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
+
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await leaveAPI.updateLeaveStatus(id, status);
+      alert(`Leave ${status.toLowerCase()} successfully!`);
+      fetchLeaves();
+    } catch (err) {
+      console.error("Error updating leave status:", err);
+      alert("Failed to update leave status!");
+    }
+  };
   
-  // ✅ Loading check hooks के बाद
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -119,9 +153,24 @@ const LeaveManagement = () => {
                   </td>
                   <td className="p-3">{leave.teacher}</td>
                   <td className="p-3">
-                    <button className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
-                      View
-                    </button>
+                    {leave.status === "Pending" ? (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleStatusUpdate(leave.id, "Approved")}
+                          className="px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleStatusUpdate(leave.id, "Rejected")}
+                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">No action</span>
+                    )}
                   </td>
                 </tr>
               ))

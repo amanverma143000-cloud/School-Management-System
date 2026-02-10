@@ -1,194 +1,274 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
+import { motion } from "framer-motion";
+import { teacherAPI, attendanceAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 const MarkAttendance = () => {
-  const [selectedClass, setSelectedClass] = useState("");
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Dummy students data
-  const allStudents = {
-    "1": [
-      { id: 1, name: "Rohan Kumar" },
-      { id: 2, name: "Anjali Singh" },
-    ],
-    "2": [
-      { id: 3, name: "Aman Verma" },
-      { id: 4, name: "Sanya Gupta" },
-    ],
-    // Add more classes as needed
-  };
+  const [allStudents, setAllStudents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (selectedClass) {
-      setLoading(true);
-      setTimeout(() => {
-        const classStudents = allStudents[selectedClass] || [];
-        const studentsWithAttendance = classStudents.map((stu) => ({
-          ...stu,
-          attendance: "",
-        }));
-        setStudents(studentsWithAttendance);
-        setLoading(false);
-      }, 300);
-    } else {
-      setStudents([]);
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await teacherAPI.getMyStudents();
+      setAllStudents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setError("Failed to load students. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [selectedClass]);
+  };
+  
+  const studentsData = allStudents.reduce((acc, student) => {
+    const classKey = `${student.class} - ${student.section}`;
+    if (!acc[classKey]) acc[classKey] = [];
+    acc[classKey].push({
+      id: student._id,
+      name: `${student.name} ${student.lastname}`,
+      rollNumber: student.rollNumber
+    });
+    return acc;
+  }, {});
 
-  const handleAttendanceChange = (id, value) => {
-    setStudents((prev) =>
-      prev.map((stu) =>
-        stu.id === id ? { ...stu, attendance: value } : stu
-      )
+  const [selectedClass, setSelectedClass] = useState("");
+  const [attendance, setAttendance] = useState({});
+  const [savedAttendance, setSavedAttendance] = useState({});
+  const [viewMode, setViewMode] = useState("mark");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("teacherAttendanceData");
+    if (stored) setSavedAttendance(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("teacherAttendanceData", JSON.stringify(savedAttendance));
+  }, [savedAttendance]);
+
+  const handleMark = (id, status) => {
+    if (viewMode === "view" || viewMode === "completed") return;
+    setAttendance((prev) => ({ ...prev, [id]: status }));
+  };
+
+  const handleSave = async () => {
+    if (Object.keys(attendance).length === 0) {
+      alert("Please mark attendance for at least one student!");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const attendancePromises = Object.entries(attendance).map(([studentId, status]) =>
+        attendanceAPI.markStudentAttendance({
+          studentId,
+          status,
+          date: new Date().toISOString(),
+          markedBy: user?._id || user?.id
+        })
+      );
+      
+      await Promise.all(attendancePromises);
+      
+      const currentDate = new Date().toLocaleDateString();
+      setSavedAttendance((prev) => ({
+        ...prev,
+        [selectedClass]: {
+          data: attendance,
+          date: currentDate,
+        },
+      }));
+      
+      setSuccess('Attendance saved successfully!');
+      setSelectedClass("");
+      setAttendance({});
+      setViewMode("mark");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      setError(error.message || 'Failed to save attendance');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleClassChange = (cls) => {
+    setSelectedClass(cls);
+    if (savedAttendance[cls]) {
+      setAttendance(savedAttendance[cls].data);
+      setViewMode("completed");
+    } else {
+      setAttendance({});
+      setViewMode("mark");
+    }
+  };
+
+  const handleView = (cls) => {
+    setSelectedClass(cls);
+    setAttendance(savedAttendance[cls].data);
+    setViewMode("view");
+  };
+
+  const handleEdit = (cls) => {
+    setSelectedClass(cls);
+    setAttendance(savedAttendance[cls].data);
+    setViewMode("mark");
+  };
+
+  const selectedStudents = studentsData[selectedClass] || [];
+  const allMarked = selectedStudents.length > 0 && selectedStudents.every((s) => attendance[s.id]);
+    
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-yellow-600">Loading students...</div>
+      </div>
     );
-  };
-
-  const handleSave = () => {
-    console.log("Saved Attendance:", students);
-    alert("Attendance saved successfully!");
-  };
-
-  const handleRefresh = () => {
-    setSelectedClass("");
-    setStudents([]);
-  };
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6"
+      className="min-h-screen p-6"
+      style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
     >
-      <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-          Mark Attendance
+      <div 
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="max-w-6xl mx-auto rounded-3xl border border-yellow-200 p-8"
+      >
+        <h1 className="text-3xl font-bold text-[var(--text-secondary)] mb-6 text-center">
+          📋 Mark Attendance
         </h1>
 
-        {/* Class Select */}
-        <div className="flex justify-center mb-8">
-          <label className="font-semibold text-gray-700 mr-4 self-center">
-            Select Class:
-          </label>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {success}
+          </div>
+        )}
+
+        {/* Class Dropdown */}
+        <div className="flex justify-center mb-6">
           <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400"
             value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
+            onChange={(e) => handleClassChange(e.target.value)}
+            className="border border-yellow-300 rounded-lg px-4 py-2 w-60 focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-yellow-50"
           >
-            <option value="">-- Select Class --</option>
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                Class {i + 1}
+            <option value="">Select Class</option>
+            {Object.keys(studentsData).map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}
               </option>
             ))}
           </select>
         </div>
 
-        {loading && (
-          <p className="text-center text-gray-500 mb-4">Loading students...</p>
+        {/* Saved Attendance Cards */}
+        {Object.keys(savedAttendance).length > 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 mb-10">
+            {Object.entries(savedAttendance).map(([cls, info]) => (
+              <motion.div
+                key={cls}
+                whileHover={{ scale: 1.01 }}
+                className="flex justify-between items-center bg-yellow-50 border rounded-xl p-4 shadow-sm w-full"
+              >
+                <div className="text-left font-semibold text-gray-800">{cls}</div>
+                <div className="text-center font-semibold text-gray-700">📅 {info.date || "Not Saved"}</div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleView(cls)} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">View</button>
+                  <button onClick={() => handleEdit(cls)} className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">Edit</button>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         )}
 
-        {/* Students Table */}
-        {students.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 rounded-xl shadow-lg bg-white">
-              <thead className="bg-green-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-gray-700 font-medium">
-                    Student Name
-                  </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
-                    Class
-                  </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
-                    P
-                  </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
-                    A
-                  </th>
-                  <th className="px-6 py-3 text-center text-gray-700 font-medium">
-                    L
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {students.map((stu) => (
-                  <tr
-                    key={stu.id}
-                    className="hover:bg-green-50 transition duration-200"
-                  >
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {stu.name}
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-700">
-                      {selectedClass}
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-700">
-                      {new Date().toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleAttendanceChange(stu.id, "P")}
-                        className={`px-3 py-1 rounded-full font-semibold transition ${
-                          stu.attendance === "P"
-                            ? "bg-green-500 text-white"
-                            : "bg-green-100 text-green-700 hover:bg-green-300"
-                        }`}
-                      >
-                        P
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleAttendanceChange(stu.id, "A")}
-                        className={`px-3 py-1 rounded-full font-semibold transition ${
-                          stu.attendance === "A"
-                            ? "bg-red-500 text-white"
-                            : "bg-red-100 text-red-700 hover:bg-red-300"
-                        }`}
-                      >
-                        A
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleAttendanceChange(stu.id, "L")}
-                        className={`px-3 py-1 rounded-full font-semibold transition ${
-                          stu.attendance === "L"
-                            ? "bg-yellow-500 text-white"
-                            : "bg-yellow-100 text-yellow-700 hover:bg-yellow-300"
-                        }`}
-                      >
-                        L
-                      </button>
-                    </td>
+        {/* Attendance Table */}
+        {selectedClass && viewMode !== "completed" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-yellow-50 border-b">
+                    <th className="p-3 text-left text-gray-700 font-semibold">Name</th>
+                    <th className="p-3 text-center text-gray-700 font-semibold">Roll No</th>
+                    <th className="p-3 text-center text-gray-700 font-semibold">Mark Attendance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {selectedStudents.map((student) => (
+                    <motion.tr key={student.id} whileHover={{ scale: 1.01 }} className="border-b hover:bg-yellow-50">
+                      <td className="p-3">
+                        <div>
+                          <div className="font-medium">{student.name}</div>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center text-gray-600">
+                        {student.rollNumber}
+                      </td>
+                      <td className="p-3 text-center space-x-3">
+                        {["Present", "Absent", "Leave"].map((status) => {
+                          const isActive = attendance[student.id] === status;
+                          const base = "px-4 py-2 rounded-full font-medium transition-all duration-200";
+                          const styles = {
+                            Present: isActive ? "bg-green-500 text-white shadow-md scale-105" : "bg-green-100 text-green-700 hover:bg-green-200",
+                            Absent: isActive ? "bg-red-500 text-white shadow-md scale-105" : "bg-red-100 text-red-700 hover:bg-red-200",
+                            Leave: isActive ? "bg-yellow-500 text-white shadow-md scale-105" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
+                          };
+                          return (
+                            <motion.button
+                              key={status}
+                              whileTap={{ scale: 0.95 }}
+                              disabled={viewMode === "view"}
+                              onClick={() => handleMark(student.id, status)}
+                              className={`${base} ${styles[status]} ${viewMode === "view" ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                              {status}
+                            </motion.button>
+                          );
+                        })}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Save Button */}
+            {allMarked && viewMode === "mark" && (
+              <motion.div className="flex justify-center mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? '⏳ Saving...' : '💾 Save Attendance'}
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
         )}
 
-        {/* Buttons */}
-        {students.length > 0 && (
-          <div className="flex justify-end gap-4 mt-8">
-            <button
-              onClick={handleRefresh}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold px-6 py-2 rounded-xl transition"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={handleSave}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-xl transition"
-            >
-              Save
-            </button>
-          </div>
+        {!selectedClass && Object.keys(savedAttendance).length === 0 && (
+          <p className="text-gray-500 text-center mt-10">Please select a class to mark attendance.</p>
         )}
       </div>
     </motion.div>

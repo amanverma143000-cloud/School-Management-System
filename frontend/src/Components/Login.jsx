@@ -1,75 +1,94 @@
+// React aur hooks import kar rahe hain
 import React, { useState } from "react";
+// Animation library import kar rahe hain - smooth transitions ke liye
 import { motion } from "framer-motion"; // eslint-disable-line
+// Toast notifications ke liye - success/error messages dikhane ke liye
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+// Navigation ke liye - page redirect karne ke liye
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { useLoginMutation } from "../../Api/SchoolApi"; // ✅ RTK Query hook
-import { setCredentials } from "../../Api/authSlice"; // ✅ Redux action
-import { useAuth } from "../context/AuthProvider"; // ✅ Context hook
+// Authentication context hook
+import { useAuth } from "../context/AuthProvider"; // Local storage management ke liye
+// Axios-based API service
+import { authAPI } from "../services/api";
 
+// 🔑 LOGIN COMPONENT - User authentication handle karta hai
 const Login = ({ closeLogin }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { login: contextLogin } = useAuth(); // ✅ Context login function
+  // 📝 STATE VARIABLES - Form data store karne ke liye
+  const [email, setEmail] = useState("");         // User ka email
+  const [password, setPassword] = useState("");   // User ka password
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  
+  // 🔧 HOOKS SETUP
+  const navigate = useNavigate();                  // Page navigation ke liye
+  const { login: contextLogin } = useAuth();       // Context se login function
 
-  const [login, { isLoading }] = useLoginMutation(); // ✅ RTK mutation hook
-
+  // 🚀 FORM SUBMIT HANDLER - Jab user login button dabaye
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Page reload prevent karne ke liye
+    setIsLoading(true);
+    
     try {
-      const data = await login({ email, password }).unwrap(); // ✅ auto API call
+      // 🌐 API CALL - Backend se login request bhej rahe hain
+      const data = await authAPI.login({ email, password });
 
+      // ✅ LOGIN SUCCESS - Agar token mil gaya
       if (data?.token) {
-        // ✅ Redux store mein save karo
-        dispatch(setCredentials({ token: data.token, role: data.role }));
-        
-        // ✅ Context mein bhi save karo (localStorage ke liye)
+        console.log('Login response data:', data);
+        // Context mein save kar rahe hain (localStorage ke liye)
         contextLogin({
           token: data.token,
           role: data.role,
-          email: data.email
+          email: data.email,
+          name: data.name,
+          _id: data._id || data.id || data.userId
         });
         
+        // Success message dikhayenge
         toast.success("Login successful!", { autoClose: 1500 });
 
+        // 🗺️ ROLE-BASED REDIRECT - User ke role ke basis par dashboard par bhejenge
         setTimeout(() => {
           switch (data.role?.toLowerCase()) {
             case "admin":
-              navigate("/admin-dashboard");
+              navigate("/admin-dashboard");    // Admin dashboard
               break;
             case "teacher":
-              navigate("/teacher-dashboard");
+              navigate("/teacher-dashboard");  // Teacher dashboard
               break;
             case "student":
-              navigate("/student-dashboard");
+              navigate("/student-dashboard");  // Student dashboard
               break;
             default:
-              navigate("/");
+              navigate("/");                   // Home page (fallback)
           }
         }, 1500);
       } else {
+        // ❌ LOGIN FAILED - Token nahi mila
         toast.error(data?.message || "Login failed", { autoClose: 3000 });
       }
     } catch (error) {
-      console.log(error)
-      toast.error(error?.data?.message || "Something went wrong", {
+      // 🚫 ERROR HANDLING - Koi technical error aayi
+      console.log(error);
+      toast.error(error?.message || "Something went wrong", {
         autoClose: 3000,
-        
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // 🎨 UI RENDER - Login form ka design
   return (
+    // Motion div - Animation effects ke liye
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.7 }}
+      initial={{ opacity: 0, scale: 0.8 }}    // Starting state
+      animate={{ opacity: 1, scale: 1 }}      // Final state
+      exit={{ opacity: 0, scale: 0.7 }}       // Exit state
       transition={{ duration: 0.6, ease: "easeInOut" }}
       className="relative w-full max-w-md bg-white/90 backdrop-blur-sm border border-yellow-300 rounded-2xl shadow-2xl p-8"
     >
+      {/* 📝 HEADER SECTION */}
       <h2 className="text-3xl font-bold text-center text-gray-800 mb-2">
         Welcome Back 👋
       </h2>
@@ -77,7 +96,9 @@ const Login = ({ closeLogin }) => {
         Please log in to continue to your dashboard
       </p>
 
+      {/* 📝 LOGIN FORM */}
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Email Input Field */}
         <div>
           <label className="block text-gray-700 mb-1 text-sm font-medium">
             Email
@@ -85,13 +106,14 @@ const Login = ({ closeLogin }) => {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)} // Email state update
             placeholder="Enter your email"
             required
             className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-400"
           />
         </div>
 
+        {/* Password Input Field */}
         <div>
           <label className="block text-gray-700 mb-1 text-sm font-medium">
             Password
@@ -99,36 +121,40 @@ const Login = ({ closeLogin }) => {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)} // Password state update
             placeholder="Enter your password"
             required
             className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-400"
           />
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading} // Loading state mein button disable
           className={`w-full py-3 font-semibold rounded-lg transition-all ${
             isLoading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-yellow-400 hover:bg-yellow-500 text-white"
+              ? "bg-gray-400 cursor-not-allowed"           // Loading state styling
+              : "bg-yellow-400 hover:bg-yellow-500 text-white" // Normal state styling
           }`}
         >
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading ? "Logging in..." : "Login"} {/* Dynamic button text */}
         </button>
       </form>
 
+      {/* Back Button */}
       <button
-        onClick={closeLogin}
+        onClick={closeLogin} // Login modal close karne ke liye
         className="w-full py-2 mt-4 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition"
       >
         ← Back
       </button>
 
+      {/* Toast Container - Notifications dikhane ke liye */}
       <ToastContainer position="top-right" newestOnTop />
     </motion.div>
   );
 };
 
+// Component export kar rahe hain
 export default Login;

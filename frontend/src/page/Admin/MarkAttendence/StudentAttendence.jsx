@@ -1,11 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
-import { useGetStudentsQuery } from "../../../../Api/SchoolApi";
+import { motion } from "framer-motion";
+import { studentAPI, attendanceAPI } from "../../../services/api";
 
 export default function StudentAttendance({ goBack }) {
-  const { data: allStudents = [], isLoading } = useGetStudentsQuery();
+  const [allStudents, setAllStudents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await studentAPI.getAllStudents();
+        setAllStudents(data.data || data || []);
+      } catch (error) {
+        console.error('Error fetching students:', error);
+        alert('Failed to load students');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
   
-  // Group students by class and section
   const studentsData = allStudents.reduce((acc, student) => {
     const classKey = `${student.class} - ${student.section}`;
     if (!acc[classKey]) acc[classKey] = [];
@@ -20,15 +36,13 @@ export default function StudentAttendance({ goBack }) {
   const [selectedClass, setSelectedClass] = useState("");
   const [attendance, setAttendance] = useState({});
   const [savedAttendance, setSavedAttendance] = useState({});
-  const [viewMode, setViewMode] = useState("mark"); // mark | view | completed
+  const [viewMode, setViewMode] = useState("mark");
 
-  // ✅ Load from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("attendanceData");
     if (stored) setSavedAttendance(JSON.parse(stored));
   }, []);
 
-  // ✅ Save to localStorage when updated
   useEffect(() => {
     localStorage.setItem("attendanceData", JSON.stringify(savedAttendance));
   }, [savedAttendance]);
@@ -38,18 +52,38 @@ export default function StudentAttendance({ goBack }) {
     setAttendance((prev) => ({ ...prev, [id]: status }));
   };
 
-  const handleSave = () => {
-    const currentDate = new Date().toLocaleDateString();
-    setSavedAttendance((prev) => ({
-      ...prev,
-      [selectedClass]: {
-        data: attendance,
-        date: currentDate,
-      },
-    }));
-    setSelectedClass("");
-    setAttendance({});
-    setViewMode("mark");
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const attendancePromises = Object.entries(attendance).map(([studentId, status]) =>
+        attendanceAPI.markStudentAttendance({
+          studentId,
+          status,
+          date: new Date().toISOString()
+        })
+      );
+      
+      await Promise.all(attendancePromises);
+      
+      const currentDate = new Date().toLocaleDateString();
+      setSavedAttendance((prev) => ({
+        ...prev,
+        [selectedClass]: {
+          data: attendance,
+          date: currentDate,
+        },
+      }));
+      
+      alert('Attendance saved successfully!');
+      setSelectedClass("");
+      setAttendance({});
+      setViewMode("mark");
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      alert(error.message || 'Failed to save attendance');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClassChange = (cls) => {
@@ -245,9 +279,10 @@ export default function StudentAttendance({ goBack }) {
             >
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md"
+                disabled={isSaving}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                💾 Save Attendance
+                {isSaving ? '⏳ Saving...' : '💾 Save Attendance'}
               </button>
             </motion.div>
           )}

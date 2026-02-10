@@ -4,21 +4,21 @@ import mongoose from "mongoose";
 const examResultSchema = new mongoose.Schema({
   exam: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Exam",
+    ref: "exam",
     required: true 
   },
   student: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Student",
+    ref: "students",
     required: true 
   },
   marks: { type: Number, required: true },
   grade: { type: String, required: true },
   teacher: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Teacher",
+    ref: "teachers",
     required: true 
   }
 }, { timestamps: true });
 
-export default mongoose.model("ExamResult", examResultSchema);
+export default mongoose.model("result", examResultSchema, "results");

@@ -6,75 +6,89 @@ import { getAllEvents, createEvent, updateEvent, deleteEvent } from "../controll
 import { getAllHomework, createHomework, updateHomework, deleteHomework } from "../controllers/homeworkController.js";
 import { getAllLeaves, updateLeaveStatus } from "../controllers/leaveController.js";
 import { getStudentAttendance, getTeacherAttendance, markStudentAttendance, markTeacherAttendance } from "../controllers/attendanceController.js";
-import { getAllStudents, createStudent, updateStudent, deleteStudent } from "../controllers/studentController.js";
+import { getAllStudents, createStudent, updateStudent, deleteStudent, getUniqueSections } from "../controllers/studentController.js";
 import { getAllNotices, createNotice, updateNotice, deleteNotice } from "../controllers/noticeController.js";
 import { getAllResults } from "../controllers/ResultController.js";
-import { getAllClasses, createClass, updateClass, deleteClass, getClass } from "../controllers/classController.js";
+import { getAllClasses, createClass, updateClass, deleteClass, getClass, createPredefinedClasses, deleteAllClasses } from "../controllers/classController.js";
 import { getAllHolidays, createHoliday, deleteHoliday } from "../controllers/holidayController.js";
-import { getAllAdmins } from "../controllers/adminController.js";
+// Admin controller functions import kar rahe hain
+import { 
+  getAllAdmins, 
+  getAdminById, 
+  createAdmin, 
+  updateAdmin, 
+  deleteAdmin, 
+  getAdminDashboardData 
+} from "../controllers/adminController.js";
 import { getAllHomework as getAdminHomework } from "../controllers/homeworkController.js";
 import { getAllExamResults as getAdminResults } from "../controllers/ResultController.js";
 
 const router = express.Router();
 
-// Admin only access
+// Admin only access - Saare routes sirf Admin access kar sakta hai
 router.use(protect);
 router.use(authorizeRoles("Admin"));
 
-// Events
+// ========== ADMIN MANAGEMENT ==========
+router.get("/admins", getAllAdmins);              // Saare admins ki list
+router.get("/admins/:id", getAdminById);          // Specific admin ki details
+router.post("/admins", createAdmin);              // Naya admin create karna
+router.put("/admins/:id", updateAdmin);           // Admin update karna
+router.delete("/admins/:id", deleteAdmin);        // Admin delete karna
+router.get("/dashboard", getAdminDashboardData);   // Dashboard data
+
+// ========== EVENTS MANAGEMENT ==========
 router.get("/events", getAllEvents);
 router.post("/events", createEvent);
 router.put("/events/:id", updateEvent);
 router.delete("/events/:id", deleteEvent);
 
-// Homework
+// ========== HOMEWORK MANAGEMENT ==========
 router.get("/homework", getAllHomework);
 router.post("/homework", createHomework);
 router.put("/homework/:id", updateHomework);
 router.delete("/homework/:id", deleteHomework);
 
-// Leave Management
+// ========== LEAVE MANAGEMENT ==========
 router.get("/leaves", getAllLeaves);
 router.put("/leaves/:id", updateLeaveStatus);
 
-// Attendance
+// ========== ATTENDANCE MANAGEMENT ==========
 router.get("/attendance/students", getStudentAttendance);
 router.get("/attendance/teachers", getTeacherAttendance);
 router.post("/attendance/students", markStudentAttendance);
 router.post("/attendance/teachers", markTeacherAttendance);
 
-// Students
+// ========== STUDENTS MANAGEMENT ==========
+router.get("/students/sections", getUniqueSections);  // Unique sections list (pehle specific route)
 router.get("/students", getAllStudents);
 router.post("/students", createStudent);
 router.put("/students/:id", updateStudent);
 router.delete("/students/:id", deleteStudent);
 
-// Notices
+// ========== NOTICES MANAGEMENT ==========
 router.get("/notices", getAllNotices);
 router.post("/notices", createNotice);
 router.put("/notices/:id", updateNotice);
 router.delete("/notices/:id", deleteNotice);
 
-// Results
+// ========== RESULTS MANAGEMENT ==========
 router.get("/results", getAllResults);
 
-// Classes
-router.get("/classes", getAllClasses);
-router.post("/classes", createClass);
-router.get("/classes/:id", getClass);
-router.put("/classes/:id", updateClass);
-router.delete("/classes/:id", deleteClass);
+// ========== CLASSES MANAGEMENT ==========
+router.get("/classes", getAllClasses);                    // Saari classes ki list
+router.post("/classes", createClass);                     // Nayi class create karna
+router.get("/classes/:id", getClass);                    // Specific class ki details
+router.put("/classes/:id", updateClass);                 // Class update karna
+router.delete("/classes/:id", deleteClass);              // Class delete karna
 
-// Holidays
+// Predefined Classes Management
+router.post("/classes/predefined", createPredefinedClasses); // Predefined classes create karna
+router.delete("/classes/all", deleteAllClasses);             // Saari classes delete karna
+
+// ========== HOLIDAYS MANAGEMENT ==========
 router.get("/holidays", getAllHolidays);
 router.post("/holidays", createHoliday);
 router.delete("/holidays/:id", deleteHoliday);
-
-// Admins
-router.get("/admins", getAllAdmins);
-
-// Admin access to all data
-router.get("/homework", getAdminHomework);
-router.get("/results", getAdminResults);
 
 export default router;

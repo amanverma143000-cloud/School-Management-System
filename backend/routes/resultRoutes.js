@@ -4,30 +4,27 @@ import {
     getAllExamResults,
     getExamResultById,
     updateExamResult,
-    deleteExamResult
+    deleteExamResult,
+    getAllResults
 } from "../controllers/ResultController.js";
-
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔒 Protect all routes + only Teacher can access
+// 🔒 Protect all routes
 router.use(protect);
-router.use(authorizeRoles("Teacher"));
 
-// 1️⃣ Post a new exam result
-router.post("/resultadd", postExamResult);
+// ========== Teacher Routes (Create, Update, Delete) ==========
+router.post("/add", authorizeRoles("Teacher"), postExamResult);
+router.put("/:id", authorizeRoles("Teacher"), updateExamResult);
+router.delete("/:id", authorizeRoles("Teacher"), deleteExamResult);
 
-// 2️⃣ Get all exam results for logged-in teacher
-router.get("/resultget", getAllExamResults);
+// ========== Teacher Routes (View own results) ==========
+router.get("/my-results", authorizeRoles("Teacher"), getAllExamResults);
 
-// 3️⃣ Get single exam result by ID
+// ========== Shared Routes (View) ==========
+// Both Teacher and Student can view results
+router.get("/all", getAllResults);
 router.get("/result/:id", getExamResultById);
-
-// 4️⃣ Update exam result by ID
-router.put("/result/:id", updateExamResult);
-
-// 5️⃣ Delete exam result by ID
-router.delete("/result/:id", deleteExamResult);
 
 export default router;

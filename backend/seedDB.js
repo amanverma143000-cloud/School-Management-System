@@ -1,159 +1,623 @@
+// seedDB.js - Database seeding script for School Management System
+// Run this script to populate the database with sample data
+
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
+
+// Import all models
 import Admin from "./models/Admin.js";
-import Student from "./models/Student.js";
 import Teacher from "./models/Teacher.js";
-import Event from "./models/Event.js";
-import Notice from "./models/Notice.js";
-import Exam from "./models/Exam.js";
-import Homework from "./models/Homework.js";
-import LeaveRequest from "./models/LeaveRequest.js";
-import ExamResult from "./models/ExamResult.js";
-import AttendStudent from "./models/AttendStudent.js";
-import AttendTeacher from "./models/AttendTeacher.js";
+import Student from "./models/Student.js";
 import Class from "./models/Class.js";
+import Exam from "./models/Exam.js";
+import ExamResult from "./models/ExamResult.js";
+import Homework from "./models/Homework.js";
+import Notice from "./models/Notice.js";
+import Event from "./models/Event.js";
 import Holiday from "./models/Holiday.js";
+import LeaveRequest from "./models/LeaveRequest.js";
+import StudentAttendance from "./models/AttendStudent.js";
+import TeacherAttendance from "./models/AttendTeacher.js";
 
 dotenv.config();
 
-const connectDB = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log("✅ Database connected");
+const seedDatabase = async () => {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGO_URI||`mongodb://localhost:27017/school_management`);
+    console.log("✅ Connected to MongoDB");
+
+    // Clear existing data
+    await Promise.all([
+      Admin.deleteMany({}),
+      Teacher.deleteMany({}),
+      Student.deleteMany({}),
+      Class.deleteMany({}),
+      Exam.deleteMany({}),
+      ExamResult.deleteMany({}),
+      Homework.deleteMany({}),
+      Notice.deleteMany({}),
+      Event.deleteMany({}),
+      Holiday.deleteMany({}),
+      LeaveRequest.deleteMany({}),
+      StudentAttendance.deleteMany({}),
+      TeacherAttendance.deleteMany({}),
+    ]);
+    console.log("🗑️ Cleared existing data");
+
+    // Create Admin
+    const adminData = {
+      name: "School Admin",
+      email: "admin@school.edu",
+      password: "admin123",
+      domain: "Administration",
+    };
+    const admin = await Admin.create(adminData);
+    console.log("✅ Created Admin:", admin.email);
+
+    // Create Teachers
+    const teacherData = [
+      {
+        name: "Rajesh Kumar",
+        email: "rajesh.kumar@school.edu",
+        password: "teacher123",
+        mobile: "9876543210",
+        location: "Delhi",
+        experience: 10,
+        subjects: ["Mathematics", "Physics"],
+        createdBy: admin._id,
+      },
+      {
+        name: "Priya Sharma",
+        email: "priya.sharma@school.edu",
+        password: "teacher123",
+        mobile: "9876543211",
+        location: "Mumbai",
+        experience: 8,
+        subjects: ["Chemistry", "Biology"],
+        createdBy: admin._id,
+      },
+      {
+        name: "Amit Verma",
+        email: "amit.verma@school.edu",
+        password: "teacher123",
+        mobile: "9876543212",
+        location: "Delhi",
+        experience: 12,
+        subjects: ["English", "Hindi"],
+        createdBy: admin._id,
+      },
+      {
+        name: "Sonia Gupta",
+        email: "sonia.gupta@school.edu",
+        password: "teacher123",
+        mobile: "9876543213",
+        location: "Bangalore",
+        experience: 6,
+        subjects: ["Computer Science", "Mathematics"],
+        createdBy: admin._id,
+      },
+    ];
+    const teachers = await Teacher.insertMany(teacherData.map(teacher => ({
+      ...teacher,
+      password: bcrypt.hashSync(teacher.password, 10)
+    })));
+    console.log(`✅ Created ${teachers.length} Teachers`);
+
+    // Create Classes
+    const classData = [
+      {
+        name: "Class 10",
+        section: "A",
+        grade: "10",
+        subjects: ["Mathematics", "Physics", "Chemistry", "English", "Hindi"],
+        capacity: 40,
+        room: "Room 101",
+        schedule: { startTime: "08:00", endTime: "14:00" },
+        createdBy: admin._id,
+      },
+      {
+        name: "Class 10",
+        section: "B",
+        grade: "10",
+        subjects: ["Mathematics", "Physics", "Chemistry", "English", "Hindi"],
+        capacity: 40,
+        room: "Room 102",
+        schedule: { startTime: "08:00", endTime: "14:00" },
+        createdBy: admin._id,
+      },
+      {
+        name: "Class 12",
+        section: "A",
+        grade: "12",
+        subjects: ["Mathematics", "Physics", "Chemistry", "English", "Computer Science"],
+        capacity: 35,
+        room: "Room 201",
+        schedule: { startTime: "08:00", endTime: "14:00" },
+        createdBy: admin._id,
+      },
+    ];
+    const classes = await Class.insertMany(classData);
+    console.log(`✅ Created ${classes.length} Classes`);
+
+    // Create Students
+    const studentData = [
+      {
+        name: "Rahul",
+        lastname: "Singh",
+        email: "rahul.singh@school.edu",
+        password: "student123",
+        mobile: "9876543220",
+        class: "10",
+        section: "A",
+        rollNumber: "10A001",
+        createdBy: admin._id,
+      },
+      {
+        name: "Priya",
+        lastname: "Patel",
+        email: "priya.patel@school.edu",
+        password: "student123",
+        mobile: "9876543221",
+        class: "10",
+        section: "A",
+        rollNumber: "10A002",
+        createdBy: admin._id,
+      },
+      {
+        name: "Amit",
+        lastname: "Yadav",
+        email: "amit.yadav@school.edu",
+        password: "student123",
+        mobile: "9876543222",
+        class: "10",
+        section: "A",
+        rollNumber: "10A003",
+        createdBy: admin._id,
+      },
+      {
+        name: "Sneha",
+        lastname: "Reddy",
+        email: "sneha.reddy@school.edu",
+        password: "student123",
+        mobile: "9876543223",
+        class: "10",
+        section: "A",
+        rollNumber: "10A004",
+        createdBy: admin._id,
+      },
+      {
+        name: "Vikram",
+        lastname: "Malhotra",
+        email: "vikram.malhotra@school.edu",
+        password: "student123",
+        mobile: "9876543224",
+        class: "10",
+        section: "B",
+        rollNumber: "10B001",
+        createdBy: admin._id,
+      },
+      {
+        name: "Anjali",
+        lastname: "Kapoor",
+        email: "anjali.kapoor@school.edu",
+        password: "student123",
+        mobile: "9876543225",
+        class: "12",
+        section: "A",
+        rollNumber: "12A001",
+        createdBy: admin._id,
+      },
+      {
+        name: "Rohan",
+        lastname: "Mehra",
+        email: "rohan.mehra@school.edu",
+        password: "student123",
+        mobile: "9876543226",
+        class: "12",
+        section: "A",
+        rollNumber: "12A002",
+        createdBy: admin._id,
+      },
+      {
+        name: "Kavya",
+        lastname: "Nair",
+        email: "kavya.nair@school.edu",
+        password: "student123",
+        mobile: "9876543227",
+        class: "10",
+        section: "B",
+        rollNumber: "10B002",
+        createdBy: admin._id,
+      },
+    ];
+    const students = await Student.insertMany(studentData.map(student => ({
+      ...student,
+      password: bcrypt.hashSync(student.password, 10)
+    })));
+    console.log(`✅ Created ${students.length} Students`);
+
+    // Update class students array and assign classTeacher
+    const class10A = classes.find(c => c.name === "Class 10" && c.section === "A");
+    const class10B = classes.find(c => c.name === "Class 10" && c.section === "B");
+    const class12A = classes.find(c => c.name === "Class 12" && c.section === "A");
+
+    if (class10A) {
+      const students10A = students.filter(s => s.class === "10" && s.section === "A");
+      class10A.students = students10A.map(s => s._id);
+      class10A.classTeacher = teachers[0]._id; // Rajesh Kumar (Math/Physics)
+      await class10A.save();
+    }
+    if (class10B) {
+      const students10B = students.filter(s => s.class === "10" && s.section === "B");
+      class10B.students = students10B.map(s => s._id);
+      class10B.classTeacher = teachers[2]._id; // Amit Verma (English/Hindi)
+      await class10B.save();
+    }
+    if (class12A) {
+      const students12A = students.filter(s => s.class === "12" && s.section === "A");
+      class12A.students = students12A.map(s => s._id);
+      class12A.classTeacher = teachers[3]._id; // Sonia Gupta (Computer Science/Math)
+      await class12A.save();
+    }
+
+    console.log(`✅ Updated classes with students and classTeachers`);
+
+    // Create Holidays
+    const holidayData = [
+      {
+        name: "Republic Day",
+        date: new Date("2025-01-26"),
+        description: "National Holiday - Celebration of Indian Constitution",
+        type: "National",
+        createdBy: admin._id,
+      },
+      {
+        name: "Holi",
+        date: new Date("2025-03-14"),
+        description: "Festival of Colors",
+        type: "Religious",
+        createdBy: admin._id,
+      },
+      {
+        name: "Good Friday",
+        date: new Date("2025-04-18"),
+        description: "Christian Holiday",
+        type: "Religious",
+        createdBy: admin._id,
+      },
+      {
+        name: "Independence Day",
+        date: new Date("2025-08-15"),
+        description: "National Holiday - Celebration of India's Independence",
+        type: "National",
+        createdBy: admin._id,
+      },
+      {
+        name: "Diwali",
+        date: new Date("2025-10-31"),
+        description: "Festival of Lights",
+        type: "Religious",
+        createdBy: admin._id,
+      },
+      {
+        name: "Christmas",
+        date: new Date("2025-12-25"),
+        description: "Christmas Day",
+        type: "Religious",
+        createdBy: admin._id,
+      },
+    ];
+    const holidays = await Holiday.insertMany(holidayData);
+    console.log(`✅ Created ${holidays.length} Holidays`);
+
+    // Create Events
+    const eventData = [
+      {
+        title: "Annual Sports Day",
+        date: new Date("2025-02-15"),
+        description: "Annual sports competition for all students",
+        audience: "All",
+        isHoliday: false,
+        location: "School Ground",
+        createdBy: admin._id,
+      },
+      {
+        title: "Science Exhibition",
+        date: new Date("2025-03-20"),
+        description: "Student science projects exhibition",
+        audience: "All",
+        isHoliday: false,
+        location: "School Auditorium",
+        createdBy: admin._id,
+      },
+      {
+        title: "Parent-Teacher Meeting",
+        date: new Date("2025-04-05"),
+        description: "PTM for all classes",
+        audience: "All",
+        isHoliday: false,
+        location: "School Building",
+        createdBy: admin._id,
+      },
+      {
+        title: "Annual Function",
+        date: new Date("2025-11-15"),
+        description: "School annual day celebration",
+        audience: "All",
+        isHoliday: false,
+        location: "School Auditorium",
+        createdBy: admin._id,
+      },
+    ];
+    const events = await Event.insertMany(eventData);
+    console.log(`✅ Created ${events.length} Events`);
+
+    // Create Notices
+    const noticeData = [
+      {
+        title: "School Timing Change",
+        description: "From Monday, school timing will be 8:00 AM to 3:00 PM",
+        audience: "All",
+        isImportant: true,
+        createdBy: admin._id,
+      },
+      {
+        title: "Exam Schedule Released",
+        description: "Final exam schedule for Classes 10 and 12 has been released",
+        audience: "All",
+        isImportant: true,
+        createdBy: admin._id,
+      },
+      {
+        title: "Uniform Guidelines",
+        description: "Students must wear proper school uniform daily",
+        audience: "Students",
+        isImportant: false,
+        createdBy: admin._id,
+      },
+      {
+        title: "Staff Meeting",
+        description: "All teachers must attend the staff meeting on Friday",
+        audience: "Teachers",
+        isImportant: true,
+        createdBy: admin._id,
+      },
+    ];
+    const notices = await Notice.insertMany(noticeData);
+    console.log(`✅ Created ${notices.length} Notices`);
+
+    // Create Homework
+    const homeworkData = [
+      {
+        title: "Math Chapter 5 Exercises",
+        description: "Complete all exercises from Chapter 5 (Polynomials)",
+        assignedBy: teachers[0]._id,
+        assignedTo: students.filter(s => s.class === "10").map(s => s._id),
+        dueDate: new Date("2025-01-30"),
+        subject: "Mathematics",
+        classSection: "10A",
+        createdBy: admin._id,
+      },
+      {
+        title: "Physics Lab Report",
+        description: "Write lab report for the Ohm's Law experiment",
+        assignedBy: teachers[0]._id,
+        assignedTo: students.filter(s => s.class === "10").map(s => s._id),
+        dueDate: new Date("2025-02-05"),
+        subject: "Physics",
+        classSection: "10A",
+        createdBy: admin._id,
+      },
+      {
+        title: "Chemistry NCERT Questions",
+        description: "Solve all in-text questions from Chapter 3",
+        assignedBy: teachers[1]._id,
+        assignedTo: students.filter(s => s.class === "10").map(s => s._id),
+        dueDate: new Date("2025-02-10"),
+        subject: "Chemistry",
+        classSection: "10A",
+        createdBy: admin._id,
+      },
+      {
+        title: "English Essay Writing",
+        description: "Write an essay on 'My Dream Career' (500 words)",
+        assignedBy: teachers[2]._id,
+        assignedTo: students.filter(s => s.class === "10").map(s => s._id),
+        dueDate: new Date("2025-02-15"),
+        subject: "English",
+        classSection: "10A",
+        createdBy: admin._id,
+      },
+    ];
+    const homeworks = await Homework.insertMany(homeworkData);
+    console.log(`✅ Created ${homeworks.length} Homeworks`);
+
+    // Create Exams
+    const examData = [
+      {
+        teacher: teachers[0]._id,
+        subjectName: "Mathematics",
+        examDate: new Date("2025-02-10"),
+        examDay: "Monday",
+        totalMarks: 100,
+        class: "10",
+        section: "A",
+        createdBy: admin._id,
+      },
+      {
+        teacher: teachers[0]._id,
+        subjectName: "Physics",
+        examDate: new Date("2025-02-12"),
+        examDay: "Wednesday",
+        totalMarks: 100,
+        class: "10",
+        section: "A",
+        createdBy: admin._id,
+      },
+      {
+        teacher: teachers[1]._id,
+        subjectName: "Chemistry",
+        examDate: new Date("2025-02-14"),
+        examDay: "Friday",
+        totalMarks: 100,
+        class: "10",
+        section: "A",
+        createdBy: admin._id,
+      },
+      {
+        teacher: teachers[3]._id,
+        subjectName: "Computer Science",
+        examDate: new Date("2025-02-17"),
+        examDay: "Monday",
+        totalMarks: 100,
+        class: "12",
+        section: "A",
+        createdBy: admin._id,
+      },
+    ];
+    const exams = await Exam.insertMany(examData);
+    console.log(`✅ Created ${exams.length} Exams`);
+
+    // Create Exam Results
+    const examResultData = [];
+    const students10A = students.filter(s => s.class === "10" && s.section === "A");
+    
+    exams.forEach((exam, examIndex) => {
+      if (exam.subjectName === "Mathematics" || exam.subjectName === "Physics" || exam.subjectName === "Chemistry") {
+        students10A.forEach((student, studentIndex) => {
+          const marks = Math.floor(Math.random() * 40) + 60; // 60-100 marks
+          let grade = "F";
+          if (marks >= 90) grade = "A+";
+          else if (marks >= 80) grade = "A";
+          else if (marks >= 70) grade = "B+";
+          else if (marks >= 60) grade = "B";
+          else if (marks >= 50) grade = "C";
+          else if (marks >= 40) grade = "D";
+          
+          examResultData.push({
+            exam: exam._id,
+            examName: `${exam.subjectName} Exam`,
+            student: student._id,
+            subject: exam.subjectName,
+            class: exam.class,
+            section: exam.section,
+            marksObtained: marks,
+            totalMarks: exam.totalMarks,
+            grade: grade,
+            teacher: exam.teacher,
+            createdBy: admin._id,
+          });
+        });
+      }
+    });
+    
+    const examResults = await ExamResult.insertMany(examResultData);
+    console.log(`✅ Created ${examResults.length} Exam Results`);
+
+    // Create Student Attendance
+    const studentAttendanceData = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      // Skip weekends
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+
+      students.forEach((student) => {
+        const random = Math.random();
+        let status = "Present";
+        if (random > 0.9) status = "Absent";
+        else if (random > 0.85) status = "Leave";
+        
+        studentAttendanceData.push({
+          student: student._id,
+          date: date,
+          status: status,
+          remarks: status === "Absent" ? "Unauthorized absence" : "",
+          markedBy: admin._id,
+        });
+      });
+    }
+    const studentAttendances = await StudentAttendance.insertMany(studentAttendanceData);
+    console.log(`✅ Created ${studentAttendances.length} Student Attendance Records`);
+
+    // Create Teacher Attendance
+    const teacherAttendanceData = [];
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      // Skip weekends
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+
+      teachers.forEach((teacher) => {
+        const random = Math.random();
+        let status = "Present";
+        if (random > 0.95) status = "Absent";
+        else if (random > 0.9) status = "Leave";
+        
+        teacherAttendanceData.push({
+          teacher: teacher._id,
+          date: date,
+          status: status,
+          remarks: status === "Leave" ? "Personal leave" : "",
+          markedBy: admin._id,
+        });
+      });
+    }
+    const teacherAttendances = await TeacherAttendance.insertMany(teacherAttendanceData);
+    console.log(`✅ Created ${teacherAttendances.length} Teacher Attendance Records`);
+
+    // Create Leave Requests
+    const leaveRequestData = [
+      {
+        requester: students[0]._id,
+        admin: admin._id,
+        reason: "Medical leave - Fever",
+        fromDate: new Date("2025-01-20"),
+        toDate: new Date("2025-01-22"),
+        status: "Approved",
+        createdBy: admin._id,
+      },
+      {
+        requester: students[1]._id,
+        admin: admin._id,
+        reason: "Family function",
+        fromDate: new Date("2025-02-05"),
+        toDate: new Date("2025-02-06"),
+        status: "Pending",
+        createdBy: admin._id,
+      },
+      {
+        requester: teachers[0]._id,
+        admin: admin._id,
+        reason: "Medical emergency",
+        fromDate: new Date("2025-02-01"),
+        toDate: new Date("2025-02-03"),
+        status: "Approved",
+        createdBy: admin._id,
+      },
+    ];
+    const leaveRequests = await LeaveRequest.insertMany(leaveRequestData);
+    console.log(`✅ Created ${leaveRequests.length} Leave Requests`);
+
+    console.log("\n🎉 Database seeding completed successfully!");
+    console.log("\n📋 Sample Login Credentials:");
+    console.log("   Admin: admin@school.edu / admin123");
+    console.log("   Teachers: teacher123 (password for all)");
+    console.log("   Students: student123 (password for all)");
+
+  } catch (error) {
+    console.error("❌ Error seeding database:", error);
+  } finally {
+    mongoose.disconnect();
+  }
 };
 
-const clearData = async () => {
-  await Admin.deleteMany({});
-  await Student.deleteMany({});
-  await Teacher.deleteMany({});
-  await Event.deleteMany({});
-  await Notice.deleteMany({});
-  await Exam.deleteMany({});
-  await Homework.deleteMany({});
-  await LeaveRequest.deleteMany({});
-  await ExamResult.deleteMany({});
-  await AttendStudent.deleteMany({});
-  await AttendTeacher.deleteMany({});
-  await Class.deleteMany({});
-  await Holiday.deleteMany({});
-  console.log("🗑️ Data cleared");
-};
+export default seedDatabase;
 
-const seedData = async () => {
-  const admins = await Admin.create([
-    { name: "Admin One", email: "admin1@school.com", password: "admin123", domain: "Management" },
-    { name: "Admin Two", email: "admin2@school.com", password: "admin123", domain: "Academics" },
-    { name: "Admin Three", email: "admin3@school.com", password: "admin123", domain: "Finance" },
-    { name: "Admin Four", email: "admin4@school.com", password: "admin123", domain: "HR" },
-    { name: "Admin Five", email: "admin5@school.com", password: "admin123", domain: "IT" }
-  ]);
-
-  const teachers = await Teacher.create([
-    { name: "Rajesh Kumar", email: "rajesh@school.com", password: "teacher123", mobile: "9876543210", location: "Delhi", experience: 5, subjects: ["Math", "Physics"] },
-    { name: "Priya Sharma", email: "priya@school.com", password: "teacher123", mobile: "9876543211", location: "Mumbai", experience: 3, subjects: ["English", "Hindi"] },
-    { name: "Amit Singh", email: "amit@school.com", password: "teacher123", mobile: "9876543212", location: "Pune", experience: 7, subjects: ["Chemistry", "Biology"] },
-    { name: "Sunita Gupta", email: "sunita@school.com", password: "teacher123", mobile: "9876543213", location: "Bangalore", experience: 4, subjects: ["History", "Geography"] },
-    { name: "Vikash Yadav", email: "vikash@school.com", password: "teacher123", mobile: "9876543214", location: "Chennai", experience: 6, subjects: ["Computer Science"] }
-  ]);
-
-  const students = await Student.create([
-    { name: "Rahul", lastname: "Verma", email: "rahul@school.com", password: "student123", mobile: "8765432109", class: "10th", section: "A", rollNumber: "10A001" },
-    { name: "Anita", lastname: "Patel", email: "anita@school.com", password: "student123", mobile: "8765432108", class: "10th", section: "B", rollNumber: "10B002" },
-    { name: "Suresh", lastname: "Kumar", email: "suresh@school.com", password: "student123", mobile: "8765432107", class: "9th", section: "A", rollNumber: "9A003" },
-    { name: "Kavita", lastname: "Singh", email: "kavita@school.com", password: "student123", mobile: "8765432106", class: "9th", section: "B", rollNumber: "9B004" },
-    { name: "Deepak", lastname: "Sharma", email: "deepak@school.com", password: "student123", mobile: "8765432105", class: "8th", section: "A", rollNumber: "8A005" }
-  ]);
-
-  const events = await Event.create([
-    { title: "Annual Sports Day", date: new Date("2024-03-15"), description: "School sports competition", createdBy: admins[0]._id, audience: "All", location: "School Ground" },
-    { title: "Science Exhibition", date: new Date("2024-04-10"), description: "Student science projects", createdBy: admins[1]._id, audience: "Students", location: "Science Lab" },
-    { title: "Teacher Training", date: new Date("2024-02-20"), description: "Professional development", createdBy: admins[0]._id, audience: "Teachers", location: "Conference Hall" },
-    { title: "Parent Meeting", date: new Date("2024-05-05"), description: "Quarterly parent-teacher meeting", createdBy: admins[1]._id, audience: "All", location: "Auditorium" },
-    { title: "Cultural Fest", date: new Date("2024-06-01"), description: "Annual cultural program", createdBy: admins[0]._id, audience: "All", location: "Main Hall" }
-  ]);
-
-  const notices = await Notice.create([
-    { title: "Exam Schedule", description: "Final exam dates announced", createdBy: students[0]._id, audience: "Students", isImportant: true },
-    { title: "Holiday Notice", description: "School closed for festival", createdBy: students[1]._id, audience: "All", isImportant: false },
-    { title: "Fee Payment", description: "Last date for fee submission", createdBy: students[2]._id, audience: "Students", isImportant: true },
-    { title: "Staff Meeting", description: "Monthly staff meeting", createdBy: students[3]._id, audience: "Teachers", isImportant: false },
-    { title: "Library Rules", description: "New library guidelines", createdBy: students[4]._id, audience: "All", isImportant: false }
-  ]);
-
-  const exams = await Exam.create([
-    { teacher: teachers[0]._id, subjectName: "Mathematics", examDate: new Date("2024-03-01"), examDay: "Monday", totalMarks: 100 },
-    { teacher: teachers[1]._id, subjectName: "English", examDate: new Date("2024-03-03"), examDay: "Wednesday", totalMarks: 80 },
-    { teacher: teachers[2]._id, subjectName: "Chemistry", examDate: new Date("2024-03-05"), examDay: "Friday", totalMarks: 100 },
-    { teacher: teachers[3]._id, subjectName: "History", examDate: new Date("2024-03-07"), examDay: "Sunday", totalMarks: 75 },
-    { teacher: teachers[4]._id, subjectName: "Computer Science", examDate: new Date("2024-03-10"), examDay: "Wednesday", totalMarks: 100 }
-  ]);
-
-  const homework = await Homework.create([
-    { title: "Math Assignment", description: "Solve chapter 5 problems", assignedBy: teachers[0]._id, assignedTo: [students[0]._id, students[1]._id], dueDate: new Date("2024-02-25") },
-    { title: "English Essay", description: "Write essay on environment", assignedBy: teachers[1]._id, assignedTo: [students[2]._id, students[3]._id], dueDate: new Date("2024-02-28") },
-    { title: "Chemistry Lab Report", description: "Submit lab experiment report", assignedBy: teachers[2]._id, assignedTo: [students[0]._id, students[4]._id], dueDate: new Date("2024-03-02") },
-    { title: "History Project", description: "Research on freedom fighters", assignedBy: teachers[3]._id, assignedTo: [students[1]._id, students[2]._id], dueDate: new Date("2024-03-05") },
-    { title: "Programming Task", description: "Create a simple calculator", assignedBy: teachers[4]._id, assignedTo: [students[3]._id, students[4]._id], dueDate: new Date("2024-03-08") }
-  ]);
-
-  const leaveRequests = await LeaveRequest.create([
-    { requester: students[0]._id, teacher: teachers[0]._id, reason: "Medical checkup", fromDate: new Date("2024-02-20"), toDate: new Date("2024-02-21"), status: "Pending" },
-    { requester: students[1]._id, teacher: teachers[1]._id, reason: "Family function", fromDate: new Date("2024-02-25"), toDate: new Date("2024-02-26"), status: "Approved" },
-    { requester: students[2]._id, teacher: teachers[2]._id, reason: "Fever", fromDate: new Date("2024-02-22"), toDate: new Date("2024-02-23"), status: "Rejected" },
-    { requester: students[3]._id, teacher: teachers[3]._id, reason: "Personal work", fromDate: new Date("2024-02-28"), toDate: new Date("2024-03-01"), status: "Pending" },
-    { requester: students[4]._id, teacher: teachers[4]._id, reason: "Emergency", fromDate: new Date("2024-03-05"), toDate: new Date("2024-03-06"), status: "Approved" }
-  ]);
-
-  const examResults = await ExamResult.create([
-    { exam: exams[0]._id, student: students[0]._id, marks: 85, grade: "A", teacher: teachers[0]._id },
-    { exam: exams[1]._id, student: students[1]._id, marks: 78, grade: "B+", teacher: teachers[1]._id },
-    { exam: exams[2]._id, student: students[2]._id, marks: 92, grade: "A+", teacher: teachers[2]._id },
-    { exam: exams[3]._id, student: students[3]._id, marks: 65, grade: "B", teacher: teachers[3]._id },
-    { exam: exams[4]._id, student: students[4]._id, marks: 88, grade: "A", teacher: teachers[4]._id }
-  ]);
-
-  const studentAttendance = await AttendStudent.create([
-    { student: students[0]._id, date: new Date("2024-02-15"), status: "Present", remarks: "On time" },
-    { student: students[1]._id, date: new Date("2024-02-15"), status: "Absent", remarks: "Sick leave" },
-    { student: students[2]._id, date: new Date("2024-02-15"), status: "Present", remarks: "Good" },
-    { student: students[3]._id, date: new Date("2024-02-15"), status: "Leave", remarks: "Family function" },
-    { student: students[4]._id, date: new Date("2024-02-15"), status: "Present", remarks: "Excellent" }
-  ]);
-
-  const teacherAttendance = await AttendTeacher.create([
-    { teacher: teachers[0]._id, date: new Date("2024-02-15"), status: "Present", remarks: "Full day" },
-    { teacher: teachers[1]._id, date: new Date("2024-02-15"), status: "Present", remarks: "Half day" },
-    { teacher: teachers[2]._id, date: new Date("2024-02-15"), status: "Absent", remarks: "Medical leave" },
-    { teacher: teachers[3]._id, date: new Date("2024-02-15"), status: "Present", remarks: "Training session" },
-    { teacher: teachers[4]._id, date: new Date("2024-02-15"), status: "Leave", remarks: "Personal work" }
-  ]);
-
-  const classes = await Class.create([
-    { name: "10th A", section: "A", grade: "10th", classTeacher: teachers[0]._id, subjects: ["Math", "Physics", "Chemistry"], capacity: 40, room: "101", schedule: { startTime: "09:00", endTime: "15:00" } },
-    { name: "10th B", section: "B", grade: "10th", classTeacher: teachers[1]._id, subjects: ["English", "Hindi", "History"], capacity: 35, room: "102", schedule: { startTime: "09:00", endTime: "15:00" } },
-    { name: "9th A", section: "A", grade: "9th", classTeacher: teachers[2]._id, subjects: ["Chemistry", "Biology", "Math"], capacity: 38, room: "201", schedule: { startTime: "09:00", endTime: "15:00" } },
-    { name: "9th B", section: "B", grade: "9th", classTeacher: teachers[3]._id, subjects: ["History", "Geography", "English"], capacity: 42, room: "202", schedule: { startTime: "09:00", endTime: "15:00" } },
-    { name: "8th A", section: "A", grade: "8th", classTeacher: teachers[4]._id, subjects: ["Computer Science", "Math", "English"], capacity: 30, room: "301", schedule: { startTime: "09:00", endTime: "15:00" } }
-  ]);
-
-  const holidays = await Holiday.create([
-    { name: "Independence Day", date: new Date("2024-08-15"), description: "National Holiday", type: "National" },
-    { name: "Gandhi Jayanti", date: new Date("2024-10-02"), description: "National Holiday", type: "National" },
-    { name: "Diwali", date: new Date("2024-11-01"), description: "Festival of Lights", type: "Religious" },
-    { name: "Christmas", date: new Date("2024-12-25"), description: "Christmas Day", type: "Religious" },
-    { name: "School Foundation Day", date: new Date("2024-03-15"), description: "School Anniversary", type: "School" }
-  ]);
-
-  console.log("✅ Data seeded successfully!");
-  console.log(`📊 Created: ${admins.length} Admins, ${teachers.length} Teachers, ${students.length} Students, ${events.length} Events, ${notices.length} Notices, ${exams.length} Exams, ${homework.length} Homework, ${leaveRequests.length} Leave Requests, ${examResults.length} Exam Results, ${studentAttendance.length} Student Attendance, ${teacherAttendance.length} Teacher Attendance, ${classes.length} Classes, ${holidays.length} Holidays`);
-};
-
-const main = async () => {
-  await connectDB();
-  await clearData();
-  await seedData();
-  await mongoose.disconnect();
-  console.log("🔌 Database disconnected");
-  process.exit(0);
-};
-
-main();
+// Run the seeder if this file is executed directly
+seedDatabase();

@@ -1,16 +1,20 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+// React aur hooks import kar rahe hain
+import React, { useState, useEffect } from "react";
+// Icons import kar rahe hain
 import { FiEdit, FiEye, FiTrash2, FiUpload } from "react-icons/fi";
-import {
-  useGetStudentsQuery,
-  useAddStudentMutation,
-  useDeleteStudentMutation,
-  useUpdateStudentMutation,
-} from "../../../../Api/SchoolApi"; // ✅ RTK hooks
+// Toast notifications ke liye
+import { toast } from "react-toastify";
+// Axios-based API service
+import { studentAPI } from "../../../services/api";
 
 const ManageStudents = () => {
   const [search, setSearch] = useState("");
-  const [editingId, setEditingId] = useState(null); // ✅ Edit mode track karega
+  const [editingId, setEditingId] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
   const [form, setForm] = useState({
     name: "",
     lastname: "",
@@ -22,31 +26,49 @@ const ManageStudents = () => {
     rollNumber: "",
   });
 
-  // ✅ RTK Query Hooks
-  const { data: students = [], isLoading, isError, refetch } = useGetStudentsQuery();
-  const [addStudent] = useAddStudentMutation();
-  const [deleteStudent] = useDeleteStudentMutation();
-  const [updateStudent] = useUpdateStudentMutation();
+  // Fetch students data
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const data = await studentAPI.getAllStudents();
+      const studentList = data.data || data || [];
+      setStudents(studentList);
+      
+      // Extract unique classes and sections
+      const uniqueClasses = [...new Set(studentList.map(s => s.class).filter(Boolean))];
+      const uniqueSections = [...new Set(studentList.map(s => s.section).filter(Boolean))];
+      setClasses(uniqueClasses.sort());
+      setSections(uniqueSections.sort());
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast.error('Failed to fetch students');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // ✅ Handle input change
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  // Handle input change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ Add or Update Student
+  // Add or Update Student
   const handleAddStudent = async (e) => {
     e.preventDefault();
     try {
       if (editingId) {
-        // 🔹 Update Mode
-        await updateStudent({ id: editingId, data: form }).unwrap();
-
-        alert("✅ Student updated successfully!");
+        // Update Mode
+        await studentAPI.updateStudent(editingId, form);
+        toast.success("Student updated successfully!");
         setEditingId(null);
       } else {
-        // 🔹 Add Mode
-        await addStudent(form).unwrap();
-        alert("🎉 Student added successfully!");
+        // Add Mode
+        await studentAPI.createStudent(form);
+        toast.success("Student added successfully!");
       }
 
       // Reset form
@@ -60,34 +82,34 @@ const ManageStudents = () => {
         section: "",
         rollNumber: "",
       });
-      refetch();
+      fetchStudents(); // Refresh data
     } catch (err) {
-      console.error("❌ Operation failed:", err);
-      alert("❌ Something went wrong");
+      console.error("Operation failed:", err);
+      toast.error(err.message || "Something went wrong");
     }
   };
 
-  // ✅ Delete Student
+  // Delete Student
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this student?")) return;
     try {
-      await deleteStudent(id).unwrap();
-      alert("🗑️ Student deleted successfully!");
-      refetch();
+      await studentAPI.deleteStudent(id);
+      toast.success("Student deleted successfully!");
+      fetchStudents(); // Refresh data
     } catch (err) {
       console.error("Delete Error:", err);
-      alert("❌ Error deleting student");
+      toast.error("Error deleting student");
     }
   };
 
-  // ✅ Edit Student (fill data in form)
+  // Edit Student (fill data in form)
   const handleEditClick = (student) => {
-    setForm(student); // Form me uska data bhar do
-    setEditingId(student._id); // Edit mode ON
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Form tak scroll
+    setForm(student);
+    setEditingId(student._id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ✅ Filter for search
+  // Filter for search
   const filtered = students.filter(
     (s) =>
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,23 +118,9 @@ const ManageStudents = () => {
       s.class?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (isLoading) return (
+  if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-xl text-gray-600">⏳ Loading students...</div>
-    </div>
-  );
-  
-  if (isError) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-xl text-red-600">
-        ❌ Error loading students. Please check your login status.
-        <button 
-          onClick={() => window.location.reload()} 
-          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Retry
-        </button>
-      </div>
     </div>
   );
 
@@ -127,33 +135,90 @@ const ManageStudents = () => {
         </div>
       </div>
 
-      {/* ✅ Add / Update Student Form */}
+      {/* Add / Update Student Form */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
           {editingId ? "✏️ Edit Student" : "➕ Add New Student"}
         </h3>
         <form onSubmit={handleAddStudent} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { name: "name", placeholder: "First Name" },
-            { name: "lastname", placeholder: "Last Name" },
-            { name: "email", placeholder: "Email (optional)", type: "email" },
-            { name: "password", placeholder: "Password", type: "password" },
-            { name: "mobile", placeholder: "Mobile" },
-            { name: "class", placeholder: "Class" },
-            { name: "section", placeholder: "Section" },
-            { name: "rollNumber", placeholder: "Roll No" },
-          ].map((input) => (
-            <input
-              key={input.name}
-              type={input.type || "text"}
-              name={input.name}
-              placeholder={input.placeholder}
-              value={form[input.name] || ""}
-              onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              required={input.name !== "email" && input.name !== "mobile"}
-            />
-          ))}
+          <input
+            type="text"
+            name="name"
+            placeholder="First Name"
+            value={form.name || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="text"
+            name="lastname"
+            placeholder="Last Name"
+            value={form.lastname || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email (optional)"
+            value={form.email || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
+          <input
+            type="text"
+            name="mobile"
+            placeholder="Mobile"
+            value={form.mobile || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <select
+            name="class"
+            value={form.class || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          >
+            <option value="">Select Class</option>
+            {classes.map((cls) => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+            <option value="new">+ Add New Class</option>
+          </select>
+          <select
+            name="section"
+            value={form.section || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          >
+            <option value="">Select Section</option>
+            {sections.map((sec) => (
+              <option key={sec} value={sec}>{sec}</option>
+            ))}
+            <option value="new">+ Add New Section</option>
+          </select>
+          <input
+            type="text"
+            name="rollNumber"
+            placeholder="Roll No"
+            value={form.rollNumber || ""}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
 
           <div className="md:col-span-2 lg:col-span-4 flex gap-3 mt-4">
             <button
@@ -201,7 +266,7 @@ const ManageStudents = () => {
         </form>
       </div>
 
-      {/* ✅ Search Bar */}
+      {/* Search Bar */}
       <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="flex-1">
@@ -219,7 +284,7 @@ const ManageStudents = () => {
         </div>
       </div>
 
-      {/* ✅ Students Table */}
+      {/* Students Table */}
       <div className="bg-white shadow-md rounded-2xl overflow-y-auto max-h-[60vh]">
         {filtered.length > 0 ? (
           <table className="w-full border-collapse text-gray-800">

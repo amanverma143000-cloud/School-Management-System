@@ -1,27 +1,22 @@
 import Notice from "../models/Notice.js";
 import Admin from "../models/Admin.js";
+import cloudinary from "../config/cloudinary.js";
 
 // 📌 Create Notice
 export const createNotice = async (req, res) => {
   try {
-    const { title, description, createdBy, audience, isImportant, expiryDate } = req.body;
+    const { title, description, audience, isImportant, expiryDate, image } = req.body;
+    const createdBy = req.user._id;
 
-    // ✅ Check if valid Admin
-    const admin = await Admin.findById(createdBy);
-    if (!admin || admin.role !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied! Only valid admins can create notices.",
-      });
-    }
+    console.log('Received image:', image);
 
-    // ✅ Create Notice
     const notice = await Notice.create({
       title,
       description,
-      createdBy: admin._id, // store admin reference properly
-      audience,
-      isImportant,
+      image: image || null,
+      createdBy,
+      audience: audience || "All",
+      isImportant: isImportant || false,
       expiryDate,
     });
 
@@ -31,6 +26,7 @@ export const createNotice = async (req, res) => {
       notice,
     });
   } catch (error) {
+    console.error("Error creating notice:", error);
     res.status(400).json({
       success: false,
       message: "Error creating notice",
@@ -42,7 +38,14 @@ export const createNotice = async (req, res) => {
 // 📌 Get All Notices
 export const getAllNotices = async (req, res) => {
   try {
-    const notices = await Notice.find().sort({ createdAt: -1 });
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    let query = {};
+    // Admin sees all notices, others see all notices too (no filter needed)
+    // Teacher and Student can see all notices
+    
+    const notices = await Notice.find(query).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: notices.length,

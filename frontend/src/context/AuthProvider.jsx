@@ -17,9 +17,11 @@ const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
+    const userId = localStorage.getItem("userId");
+    const name = localStorage.getItem("name");
     
     if (token && role && email) {
-      setUser({ token, role, email });
+      setUser({ token, role, email, _id: userId, name });
     } else {
       setUser(null);
     }
@@ -30,13 +32,23 @@ const AuthProvider = ({ children }) => {
     localStorage.setItem("token", data.token);
     localStorage.setItem("role", data.role);
     localStorage.setItem("email", data.email);
-    setUser({ token: data.token, role: data.role, email: data.email });
+    localStorage.setItem("userId", data._id);
+    localStorage.setItem("name", data.name);
+    setUser({ 
+      token: data.token, 
+      role: data.role, 
+      email: data.email, 
+      _id: data._id,
+      name: data.name 
+    });
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("email");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("name");
     setUser(null);
     window.location.href = "/";
   };

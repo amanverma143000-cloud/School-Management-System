@@ -10,15 +10,16 @@ import {
 
 const router = express.Router();
 
-// 🔐 Teacher protected routes
 router.use(protect);
-router.use(authorizeRoles("Teacher"));
 
-// Exam Routes
-router.post("/exam/add", createExam);
-router.get("/exam/all", getAllExams);
-router.get("/exam/:id", getExamById);
-router.put("/exam/update/:id", updateExam);
-router.delete("/exam/delete/:id", deleteExam);
+// ========== Teacher Routes (Create, Update, Delete) ==========
+router.post("/add", authorizeRoles("Teacher"), createExam);
+router.put("/:id", authorizeRoles("Teacher"), updateExam);
+router.delete("/:id", authorizeRoles("Teacher"), deleteExam);
+
+// ========== Shared Routes (View) ==========
+// Both Teacher and Student can view exams
+router.get("/all", getAllExams);
+router.get("/:id", getExamById);
 
 export default router;

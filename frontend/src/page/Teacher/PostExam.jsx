@@ -1,269 +1,317 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion"; // eslint-disable-line
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { examAPI, teacherAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
+import { Calendar, BookOpen, Clock, AlertCircle } from "lucide-react";
 
-const PostExam = () => {
-  const [examType, setExamType] = useState("");
-  const [headings, setHeadings] = useState([]);
-  const [newHeading, setNewHeading] = useState("");
-  const [editingHeadingIndex, setEditingHeadingIndex] = useState(-1);
-  const [editingHeadingValue, setEditingHeadingValue] = useState("");
-  const [tableData, setTableData] = useState([]);
-  const [rowData, setRowData] = useState({});
-  const [editingRowIndex, setEditingRowIndex] = useState(-1);
+function PostExam() {
+  const [examName, setExamName] = useState("");
+  const [subjectName, setSubjectName] = useState("");
+  const [examDate, setExamDate] = useState("");
+  const [examDay, setExamDay] = useState("");
+  const [totalMarks, setTotalMarks] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [studentsData, setStudentsData] = useState([]);
+  const [sectionsMapState, setSectionsMapState] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const { user } = useAuth();
 
-  // ----- Headings -----
-  const handleAddHeading = () => {
-    const heading = newHeading.trim();
-    if (!heading) return alert("Heading empty nahi ho sakta.");
-    if (headings.includes(heading)) return alert("Ye heading already exists.");
-    setHeadings([...headings, heading]);
-    setNewHeading("");
-  };
+  useEffect(() => {
+    fetchAssignedData();
+  }, []);
 
-  const handleDeleteHeading = (idx) => {
-    if (!confirm("Delete heading? Related data bhi delete ho jayega.")) return;
-    const h = [...headings];
-    const removed = h.splice(idx, 1);
-    setHeadings(h);
-    const newTable = tableData.map((row) => {
-      const copy = { ...row };
-      delete copy[removed[0]];
-      return copy;
-    });
-    setTableData(newTable);
-  };
-
-  const handleStartEditHeading = (idx) => {
-    setEditingHeadingIndex(idx);
-    setEditingHeadingValue(headings[idx]);
-  };
-
-  const handleSaveEditedHeading = () => {
-    const val = editingHeadingValue.trim();
-    if (!val) return alert("Heading empty nahi ho sakta.");
-    if (headings.some((h, i) => h === val && i !== editingHeadingIndex))
-      return alert("Same naam ka heading already exists.");
-    const h = [...headings];
-    const oldKey = h[editingHeadingIndex];
-    h[editingHeadingIndex] = val;
-    setHeadings(h);
-
-    const newTable = tableData.map((row) => {
-      const copy = { ...row };
-      copy[val] = copy[oldKey] ?? "";
-      if (oldKey in copy) delete copy[oldKey];
-      return copy;
-    });
-    setTableData(newTable);
-    setEditingHeadingIndex(-1);
-    setEditingHeadingValue("");
-  };
-
-  // ----- Rows -----
-  const handleRowChange = (heading, value) => {
-    setRowData((prev) => ({ ...prev, [heading]: value }));
-  };
-
-  const handleAddOrSaveRow = () => {
-    if (headings.length === 0) return alert("Pehle headings add karo.");
-    const missing = headings.filter((h) => !(rowData[h] && String(rowData[h]).trim() !== ""));
-    if (missing.length > 0) return alert("Please fill: " + missing.join(", "));
-
-    if (editingRowIndex === -1) {
-      setTableData((prev) => [...prev, { ...rowData }]);
-      setRowData({});
-    } else {
-      const t = [...tableData];
-      t[editingRowIndex] = { ...rowData };
-      setTableData(t);
-      setEditingRowIndex(-1);
-      setRowData({});
+  const fetchAssignedData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch classes and subjects in parallel
+      const [classesRes, subjectsRes, teacherRes] = await Promise.all([
+        teacherAPI.getMyClasses(),
+        teacherAPI.getMySubjects(),
+        teacherAPI.getMyStudents()
+      ]);
+      
+      setClasses(Array.isArray(classesRes) ? classesRes : []);
+      setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
+      
+      console.log('API Response - Classes:', classesRes);
+      console.log('API Response - Subjects:', subjectsRes);
+      console.log('API Response - Students:', teacherRes);
+      
+      // Extract sections from students
+      const studentsData = Array.isArray(teacherRes) ? teacherRes : [];
+      setStudentsData(studentsData);
+      
+      const classSectionsMap = {};
+      studentsData.forEach(student => {
+        if (student.class && student.section) {
+          if (!classSectionsMap[student.class]) {
+            classSectionsMap[student.class] = new Set();
+          }
+          classSectionsMap[student.class].add(student.section);
+        }
+      });
+      
+      // Store sections map for later use
+      setSectionsMapState(classSectionsMap);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Error loading data: ' + (error.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditRow = (idx) => {
-    setEditingRowIndex(idx);
-    setRowData({ ...tableData[idx] });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  useEffect(() => {
+    if (selectedClass) {
+      // Get sections for the selected class
+      const classSections = sectionsMapState[selectedClass];
+      console.log('Selected class:', selectedClass, 'Sections found:', classSections);
+      if (classSections && classSections.size > 0) {
+        setSections(Array.from(classSections).sort());
+      } else {
+        // Fallback: check if sections exist in studentsData directly
+        const directSections = studentsData
+          .filter(s => s.class === selectedClass)
+          .map(s => s.section)
+          .filter(Boolean);
+        if (directSections.length > 0) {
+          setSections([...new Set(directSections)].sort());
+        } else {
+          // Default sections if none found
+          setSections(['A', 'B', 'C'].filter(() => true));
+        }
+      }
+    } else {
+      setSections([]);
+      setSelectedSection("");
+    }
+  }, [selectedClass, sectionsMapState, studentsData]);
+
+  const handleDateChange = (e) => {
+    const selectedDate = e.target.value;
+    setExamDate(selectedDate);
+    
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      setExamDay(days[date.getDay()]);
+    } else {
+      setExamDay("");
+    }
   };
 
-  const handleDeleteRow = (idx) => {
-    if (!confirm("Delete row?")) return;
-    const t = [...tableData];
-    t.splice(idx, 1);
-    setTableData(t);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!examName || !subjectName || !examDate || !examDay || !totalMarks || !selectedClass || !selectedSection) {
+      alert("Please fill all fields!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await examAPI.createExam({
+        examName,
+        subjectName,
+        examDate,
+        examDay,
+        totalMarks: Number(totalMarks),
+        class: selectedClass,
+        section: selectedSection,
+        createdBy: user?._id || user?.id
+      });
+      
+      setSuccess("Exam created successfully!");
+      setExamName("");
+      setSubjectName("");
+      setExamDate("");
+      setExamDay("");
+      setTotalMarks("");
+      setSelectedClass("");
+      setSelectedSection("");
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error creating exam:', error);
+      setError("Error creating exam: " + (error.message || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCancelEditHeading = () => {
-    setEditingHeadingIndex(-1);
-    setEditingHeadingValue("");
-  };
-
-  const handleCancelEditRow = () => {
-    setEditingRowIndex(-1);
-    setRowData({});
-  };
-
-  const handlePostExam = () => {
-    if (!examType) return alert("Exam type select karo.");
-    if (headings.length === 0) return alert("Add headings first.");
-    if (tableData.length === 0) return alert("Add some exam data first.");
-    console.log("Posting exam:", { examType, headings, tableData });
-    alert("Exam posted (check console).");
-  };
+  if (loading && classes.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-yellow-600">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="min-h-[calc(100vh-2rem)] bg-gradient-to-br from-blue-50 to-blue-100 py-6"
-    >
-      <div className="max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-3xl shadow-xl">
-        <h1 className="text-3xl md:text-4xl font-bold text-blue-700 mb-6 text-center">
-          Post Exam
-        </h1>
-
-        {/* Exam Type */}
-        <div className="mb-6 flex flex-wrap items-center gap-4 justify-center md:justify-start">
-          <span className="font-semibold text-gray-700">Select Exam Type:</span>
-          {["Quarterly", "Half-Yearly", "Annual"].map((type) => (
-            <label key={type} className="flex items-center gap-2 text-gray-700">
-              <input
-                type="radio"
-                name="examType"
-                value={type}
-                checked={examType === type}
-                onChange={(e) => setExamType(e.target.value)}
-                className="accent-blue-600"
-              />
-              {type}
-            </label>
-          ))}
+    <div className="min-h-screen p-6" style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="max-w-lg mx-auto rounded-2xl p-8 border border-yellow-200"
+      >
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <BookOpen className="text-yellow-600 w-7 h-7" />
+          <h2 className="text-2xl font-bold text-[var(--text-secondary)]">📝 Create Exam</h2>
         </div>
 
-        {/* Headings */}
-        <div className="mb-6">
-          <h2 className="font-semibold text-gray-700 mb-3">Add Headings for Exam Table</h2>
-          <div className="flex gap-2 flex-wrap mb-3">
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Exam Name *
+            </label>
             <input
               type="text"
-              placeholder="Enter heading e.g. Subject, Date, Total Marks, Day"
-              value={newHeading}
-              onChange={(e) => setNewHeading(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 flex-1 focus:ring-2 focus:ring-blue-400"
+              placeholder="e.g., Mid Term Exam, Unit Test 1"
+              value={examName}
+              onChange={(e) => setExamName(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
             />
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition" onClick={handleAddHeading}>
-              Add
-            </button>
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            {headings.map((h, idx) =>
-              editingHeadingIndex === idx ? (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    value={editingHeadingValue}
-                    onChange={(e) => setEditingHeadingValue(e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1"
-                  />
-                  <button onClick={handleSaveEditedHeading} className="bg-green-600 text-white px-3 py-1 rounded">Save</button>
-                  <button onClick={handleCancelEditHeading} className="bg-gray-200 px-3 py-1 rounded">Cancel</button>
-                </div>
-              ) : (
-                <div key={idx} className="bg-blue-50 border border-blue-100 px-3 py-1 rounded-full flex items-center gap-1 text-sm md:text-base">
-                  <span className="text-blue-800 font-medium">{h}</span>
-                  <button onClick={() => handleStartEditHeading(idx)} className="text-blue-600 px-1">Edit</button>
-                  <button onClick={() => handleDeleteHeading(idx)} className="text-red-600 px-1">Del</button>
-                </div>
-              )
-            )}
-          </div>
-        </div>
 
-        {/* Exam Data Input */}
-        {headings.length > 0 && (
-          <div className="mb-6">
-            <h2 className="font-semibold text-gray-700 mb-2">Add / Edit Exam Data</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200 rounded-xl shadow-sm">
-                <thead className="bg-blue-50">
-                  <tr>
-                    {headings.map((h, idx) => (
-                      <th key={idx} className="px-4 py-2 text-left text-gray-700 font-medium border">{h}</th>
-                    ))}
-                    <th className="px-4 py-2 border text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    {headings.map((h, idx) => (
-                      <td key={idx} className="px-2 py-1 border">
-                        <input
-                          type="text"
-                          value={rowData[h] || ""}
-                          onChange={(e) => handleRowChange(h, e.target.value)}
-                          className="w-full border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 text-sm"
-                          placeholder={h}
-                        />
-                      </td>
-                    ))}
-                    <td className="px-2 py-1 border text-center">
-                      {editingRowIndex === -1 ? (
-                        <button onClick={handleAddOrSaveRow} className="bg-indigo-600 text-white px-3 py-1 rounded mr-1 text-sm">Add</button>
-                      ) : (
-                        <>
-                          <button onClick={handleAddOrSaveRow} className="bg-green-600 text-white px-3 py-1 rounded mr-1 text-sm">Save</button>
-                          <button onClick={handleCancelEditRow} className="bg-gray-200 px-2 py-1 rounded text-sm">Cancel</button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Class *
+            </label>
+            <select
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedSection("");
+              }}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            >
+              <option value="">Select Class</option>
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>
+                  Class {cls}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
 
-        {/* Preview */}
-        {tableData.length > 0 && (
-          <div className="mb-4">
-            <h2 className="font-semibold text-gray-700 mb-2">Preview Exam Table</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200 rounded-xl shadow-sm">
-                <thead className="bg-blue-50">
-                  <tr>
-                    {headings.map((h, idx) => (
-                      <th key={idx} className="px-4 py-2 text-left text-gray-700 font-medium border">{h}</th>
-                    ))}
-                    <th className="px-4 py-2 border text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row, rIdx) => (
-                    <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-white" : "bg-blue-50"}>
-                      {headings.map((h, cIdx) => (
-                        <td key={cIdx} className="px-2 py-1 border text-sm">{row[h]}</td>
-                      ))}
-                      <td className="px-2 py-1 border text-center">
-                        <button onClick={() => handleEditRow(rIdx)} className="text-sm text-blue-600 mr-2">Edit</button>
-                        <button onClick={() => handleDeleteRow(rIdx)} className="text-sm text-red-600">Del</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Section *
+            </label>
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              disabled={!selectedClass}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="">Select Section</option>
+              {sections.map((sec) => (
+                <option key={sec} value={sec}>
+                  Section {sec}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3">
-          <button onClick={() => alert("Preview ready")} className="bg-gray-200 px-4 py-2 rounded-xl text-sm md:text-base">Preview</button>
-          <button onClick={handlePostExam} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl font-semibold text-sm md:text-base">Post Exam</button>
-        </div>
-      </div>
-    </motion.div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Subject Name *
+            </label>
+            <select
+              value={subjectName}
+              onChange={(e) => setSubjectName(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            >
+              <option value="">Select Subject</option>
+              {subjects.map((subject, index) => (
+                <option key={index} value={subject}>
+                  {subject}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Exam Date *
+            </label>
+            <input
+              type="date"
+              value={examDate}
+              onChange={handleDateChange}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Exam Day *
+            </label>
+            <input
+              type="text"
+              value={examDay}
+              readOnly
+              placeholder="Auto-filled from date"
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Total Marks *
+            </label>
+            <input
+              type="number"
+              placeholder="e.g. 100"
+              value={totalMarks}
+              onChange={(e) => setTotalMarks(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            />
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={loading}
+            style={{
+              backgroundColor: "var(--primary-color)",
+              color: "var(--text-primary)",
+            }}
+            className="w-full hover:bg-yellow-500 font-semibold py-3 rounded-xl shadow-md transition disabled:opacity-50"
+          >
+            {loading ? 'Creating...' : 'Create Exam'}
+          </motion.button>
+        </form>
+      </motion.div>
+    </div>
   );
-};
+}
 
 export default PostExam;

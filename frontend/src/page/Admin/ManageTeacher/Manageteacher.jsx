@@ -1,17 +1,16 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line
-import {
-  useGetTeachersQuery,
-  useAddTeacherMutation,
-  useUpdateTeacherMutation,
-  useDeleteTeacherMutation,
-} from "../../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { teacherAPI, studentAPI } from "../../../services/api";
+import { toast } from "react-toastify";
 
 const ManageTeachers = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,15 +19,31 @@ const ManageTeachers = () => {
     location: "",
     experience: 0,
     subjects: [],
+    students: [],
   });
 
-  // RTK Query hooks
-  const { data: teachers = [], isLoading, refetch } = useGetTeachersQuery();
-  const [addTeacher] = useAddTeacherMutation();
-  const [updateTeacher] = useUpdateTeacherMutation();
-  const [deleteTeacher] = useDeleteTeacherMutation();
+  const fetchTeachers = async () => {
+    try {
+      setIsLoading(true);
+      const [teachersData, studentsData] = await Promise.all([
+        teacherAPI.getAllTeachers(),
+        studentAPI.getAllStudents()
+      ]);
+      setTeachers(teachersData.data || teachersData || []);
+      setAllStudents(Array.isArray(studentsData) ? studentsData : []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // 🔹 OPEN / CLOSE MODAL
+  useEffect(() => {
+    fetchTeachers();
+  }, []);
+
+  // Open / Close Modal
   const openModal = (type, teacher = null) => {
     setModalType(type);
     setSelectedTeacher(teacher);
@@ -41,6 +56,7 @@ const ManageTeachers = () => {
         location: teacher.location || "",
         experience: teacher.experience || 0,
         subjects: teacher.subjects || [],
+        students: teacher.students?.map(s => s._id || s) || [],
       });
     } else {
       setFormData({
@@ -51,6 +67,7 @@ const ManageTeachers = () => {
         location: "",
         experience: 0,
         subjects: [],
+        students: [],
       });
     }
     setShowModal(true);
@@ -62,38 +79,38 @@ const ManageTeachers = () => {
     setModalType("");
   };
 
-  // 🔹 ADD / EDIT / DELETE APIs using RTK Query
+  // Add / Edit / Delete APIs using axios
   const handleSave = async () => {
     try {
       if (modalType === "add") {
-        await addTeacher(formData).unwrap();
-        alert("✅ Teacher added successfully!");
+        await teacherAPI.createTeacher(formData);
+        toast.success("Teacher added successfully!");
       } else if (modalType === "edit" && selectedTeacher) {
-        await updateTeacher({ id: selectedTeacher._id, data: formData }).unwrap();
-        alert("✅ Teacher updated successfully!");
+        await teacherAPI.updateTeacher(selectedTeacher._id, formData);
+        toast.success("Teacher updated successfully!");
       }
-      refetch();
+      fetchTeachers();
       closeModal();
     } catch (err) {
       console.error("Error saving teacher:", err);
-      alert("❌ Error saving teacher");
+      toast.error("Error saving teacher");
     }
   };
 
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this teacher?")) return;
     try {
-      await deleteTeacher(selectedTeacher._id).unwrap();
-      alert("🗑️ Teacher deleted successfully!");
-      refetch();
+      await teacherAPI.deleteTeacher(selectedTeacher._id);
+      toast.success("Teacher deleted successfully!");
+      fetchTeachers();
       closeModal();
     } catch (err) {
       console.error("Error deleting teacher:", err);
-      alert("❌ Error deleting teacher");
+      toast.error("Error deleting teacher");
     }
   };
 
-  // 🔹 UI PART (unchanged)
+  // UI Part
   return (
     <div className="p-8  min-h-screen">
       {/* Header */}
@@ -244,6 +261,22 @@ const ManageTeachers = () => {
                     onChange={(e) => setFormData({...formData, subjects: e.target.value.split(", ").filter(s => s.trim())})}
                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Assign Students:</label>
+                    <select
+                      multiple
+                      value={formData.students}
+                      onChange={(e) => setFormData({...formData, students: Array.from(e.target.selectedOptions, option => option.value)})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32"
+                    >
+                      {allStudents.map(student => (
+                        <option key={student._id} value={student._id}>
+                          {student.name} {student.lastname} - Class {student.class}-{student.section}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple students</p>
+                  </div>
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={handleSave}

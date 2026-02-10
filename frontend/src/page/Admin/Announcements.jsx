@@ -1,26 +1,78 @@
-import React, { useState } from "react";
-import { useGetNoticesQuery, useAddNoticeMutation, useDeleteNoticeMutation } from "../../../Api/SchoolApi";
+import React, { useState, useEffect } from "react";
+import { noticeAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
+import { FaImage } from "react-icons/fa";
 
 const Announcements = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const { data: apiNotices, isLoading, refetch } = useGetNoticesQuery();
-  const [addNotice] = useAddNoticeMutation();
-  const [deleteNotice] = useDeleteNoticeMutation();
-  
-  // ✅ सुरक्षित data transformation - Array.isArray() check
-  const announcements = Array.isArray(apiNotices) 
-    ? apiNotices.map(notice => ({
+  const [isImportant, setIsImportant] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [image, setImage] = useState("");
+  const [announcements, setAnnouncements] = useState([]);
+  const { user } = useAuth();
+
+  const fetchNotices = async () => {
+    try {
+      setIsLoading(true);
+      const response = await noticeAPI.getAllNotices();
+      console.log('Fetch notices response:', response);
+      const notices = response?.notices || [];
+      console.log('Notices array:', notices);
+      setAnnouncements(notices.map(notice => ({
         id: notice._id,
         title: notice.title || "No Title",
         message: notice.description || "No Description",
+        image: notice.image || "",
         audience: notice.audience || "All",
         isImportant: notice.isImportant || false,
         createdAt: notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : "N/A"
-      }))
-    : []; // ✅ अगर apiNotices array नहीं है तो empty array use करें
+      })));
+    } catch (err) {
+      console.error("Error fetching notices:", err);
+      setAnnouncements([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // ✅ Step 2: Add new announcement (POST request)
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'school_notices');
+
+    try {
+      setUploading(true);
+      console.log('Uploading image to Cloudinary...');
+      const response = await fetch('https://api.cloudinary.com/v1_1/dqhszpvxe/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      console.log('Cloudinary response:', data);
+      if (data.secure_url) {
+        setImage(data.secure_url);
+        console.log('Image URL set:', data.secure_url);
+      } else {
+        alert('Failed to get image URL from Cloudinary');
+      }
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotices();
+  }, []);
+
+  // Add new announcement
   const handleAdd = async () => {
     if (title.trim() === "" || message.trim() === "") {
       alert("Please fill all fields!");
@@ -28,31 +80,43 @@ const Announcements = () => {
     }
 
     try {
-      await addNotice({ 
+      const noticeData = { 
         title, 
         description: message,
         audience: "All",
-        isImportant: false 
-      });
-
-      // Reset inputs
+        isImportant 
+      };
+      
+      if (image) {
+        noticeData.image = image;
+      }
+      
+      console.log('Sending notice data:', noticeData);
+      const response = await noticeAPI.createNotice(noticeData);
+      console.log('Create notice response:', response);
+      
       setTitle("");
       setMessage("");
-      
-      // Refresh list
-      refetch();
+      setImage("");
+      setIsImportant(false);
+      fetchNotices();
+      alert("Announcement created successfully!");
     } catch (err) {
       console.error("Error adding announcement:", err);
+      alert(`Failed to create announcement: ${err.response?.data?.message || err.message}`);
     }
   };
 
-  // ✅ Step 3: Delete announcement (DELETE request)
+  // Delete announcement
   const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this announcement?")) return;
     try {
-      await deleteNotice(id);
-      refetch();
+      await noticeAPI.deleteNotice(id);
+      alert("Announcement deleted successfully!");
+      fetchNotices();
     } catch (err) {
       console.error("Error deleting announcement:", err);
+      alert("Failed to delete announcement!");
     }
   };
 
@@ -86,11 +150,47 @@ const Announcements = () => {
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 h-28 resize-none"
           />
 
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <FaImage /> Notice Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+            {uploading && <p className="text-sm text-blue-600 mt-2">Uploading image...</p>}
+            {image && (
+              <div className="mt-3">
+                <img src={image} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+              </div>
+            )}
+          </div>
+
+          {/* Importance Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsImportant(!isImportant)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isImportant 
+                  ? "bg-red-500 text-white hover:bg-red-600" 
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {isImportant ? "🔴 Important" : "⚪ Normal"}
+            </button>
+            <span className="text-sm text-gray-600">
+              Click to toggle importance
+            </span>
+          </div>
+
           <button
             onClick={handleAdd}
             className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg transition-all"
           >
-            Add
+            Add Announcement
           </button>
         </div>
       </div>

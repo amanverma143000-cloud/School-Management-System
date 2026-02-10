@@ -1,13 +1,19 @@
+// React aur hooks import kar rahe hain
 import React, { useState, useEffect } from "react";
+// Animation library import kar rahe hain
 import { motion } from "framer-motion"; // eslint-disable-line
+// Authentication context import kar rahe hain
 import { useAuth } from "../../context/AuthProvider";
+// Axios-based API services import kar rahe hain
 import { 
-  useGetStudentsQuery, 
-  useGetTeachersQuery,
-  useGetEventsQuery,
-  useGetHomeworkQuery,
-  useGetNoticesQuery
-} from "../../../Api/SchoolApi";
+  studentAPI, 
+  teacherAPI,
+  eventAPI,
+  homeworkAPI,
+  noticeAPI,
+  adminAPI
+} from "../../services/api";
+// Icons import kar rahe hain
 import {
   FaUserPlus,
   FaSchool,
@@ -24,6 +30,7 @@ import {
 } from "react-icons/md";
 import { FiLogOut, FiMenu } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+// Component imports
 import ManageStudents from "./ManageStudent/ManageStudents";
 import ManageTeachers from "./ManageTeacher/Manageteacher";
 import AttendanceReport from "./AttendenceReport";
@@ -42,12 +49,16 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
-  // API calls for dashboard data
-  const { data: studentsData, isLoading: studentsLoading } = useGetStudentsQuery();
-  const { data: teachersData, isLoading: teachersLoading } = useGetTeachersQuery();
-  const { data: eventsData } = useGetEventsQuery();
-  const { data: noticesData } = useGetNoticesQuery();
-  const { data: homeworkData } = useGetHomeworkQuery();
+  // State for dashboard data
+  const [dashboardData, setDashboardData] = useState({
+    students: [],
+    teachers: [],
+    events: [],
+    notices: [],
+    homework: [],
+    loading: true,
+    error: null
+  });
   
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -55,6 +66,49 @@ export default function AdminDashboard() {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setDashboardData(prev => ({ ...prev, loading: true, error: null }));
+        
+        console.log('Fetching dashboard data...');
+        
+        // Parallel API calls
+        const [studentsRes, teachersRes, eventsRes, noticesRes, homeworkRes] = await Promise.all([
+          studentAPI.getAllStudents().catch(err => { console.error('Students API error:', err); return []; }),
+          teacherAPI.getAllTeachers().catch(err => { console.error('Teachers API error:', err); return []; }),
+          eventAPI.getAllEvents().catch(err => { console.error('Events API error:', err); return []; }),
+          noticeAPI.getAllNotices().catch(err => { console.error('Notices API error:', err); return []; }),
+          homeworkAPI.getAllHomework().catch(err => { console.error('Homework API error:', err); return []; })
+        ]);
+        
+        console.log('API Responses:', { studentsRes, teachersRes, eventsRes, noticesRes, homeworkRes });
+        
+        setDashboardData({
+          students: Array.isArray(studentsRes) ? studentsRes : [],
+          teachers: Array.isArray(teachersRes) ? teachersRes : [],
+          events: Array.isArray(eventsRes) ? eventsRes : [],
+          notices: noticesRes?.notices || (Array.isArray(noticesRes) ? noticesRes : []),
+          homework: Array.isArray(homeworkRes) ? homeworkRes : [],
+          loading: false,
+          error: null
+        });
+      } catch (error) {
+        console.error('Dashboard data fetch error:', error);
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message || 'Failed to fetch dashboard data'
+        }));
+      }
+    };
+
+    if (user?.role?.toLowerCase() === 'admin') {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   const menuItems = [
     { name: "Dashboard", icon: <MdAssessment /> },
@@ -75,20 +129,30 @@ export default function AdminDashboard() {
   };
   
   // Show loading if data is being fetched
-  if (studentsLoading || teachersLoading) {
+  if (dashboardData.loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <div className="text-xl text-gray-600">Loading dashboard...</div>
+      </div>
+    );
+  }
+  
+  // Show error if data fetch failed
+  if (dashboardData.error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Loading dashboard...</div>
+        <div className="text-xl text-red-600">Error: {dashboardData.error}</div>
       </div>
     );
   }
   
   // Calculate dashboard stats with safe defaults
-  const totalStudents = Array.isArray(studentsData) ? studentsData.length : 0;
-  const totalTeachers = Array.isArray(teachersData) ? teachersData.length : 0;
-  const totalEvents = Array.isArray(eventsData) ? eventsData.length : 0;
-  const totalNotices = Array.isArray(noticesData) ? noticesData.length : 0;
-  const totalHomework = Array.isArray(homeworkData) ? homeworkData.length : 0;
+  const totalStudents = Array.isArray(dashboardData.students) ? dashboardData.students.length : 0;
+  const totalTeachers = Array.isArray(dashboardData.teachers) ? dashboardData.teachers.length : 0;
+  const totalEvents = Array.isArray(dashboardData.events) ? dashboardData.events.length : 0;
+  const totalNotices = Array.isArray(dashboardData.notices) ? dashboardData.notices.length : 0;
+  const totalHomework = Array.isArray(dashboardData.homework) ? dashboardData.homework.length : 0;
   const totalClasses = 12; // Static for now
 
   return (
@@ -290,169 +354,9 @@ export default function AdminDashboard() {
               </div>
 
               {/* Recent Activities Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                {/* Recent Students */}
-                <motion.div
-                  className="p-6 rounded-2xl shadow-sm"
-                  style={{
-                    backgroundColor: "var(--background-color)",
-                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                  }}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    👥 Recent Students
-                  </h3>
-                  <div className="space-y-3">
-                    {Array.isArray(studentsData) && studentsData.slice(0, 3).map((student, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{student.name} {student.lastname}</p>
-                          <p className="text-sm text-gray-600">{student.class} - {student.section}</p>
-                        </div>
-                        <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                          {student.rollNumber}
-                        </span>
-                      </div>
-                    )) || <p className="text-gray-500">No students found</p>}
-                  </div>
-                </motion.div>
-
-                {/* Recent Teachers */}
-                <motion.div
-                  className="p-6 rounded-2xl shadow-sm"
-                  style={{
-                    backgroundColor: "var(--background-color)",
-                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                  }}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    👨‍🏫 Recent Teachers
-                  </h3>
-                  <div className="space-y-3">
-                    {Array.isArray(teachersData) && teachersData.slice(0, 3).map((teacher, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{teacher.name}</p>
-                          <p className="text-sm text-gray-600">{teacher.subjects?.join(", ") || "No subjects"}</p>
-                        </div>
-                        <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
-                          {teacher.experience || 0}y exp
-                        </span>
-                      </div>
-                    )) || <p className="text-gray-500">No teachers found</p>}
-                  </div>
-                </motion.div>
-              </div>
-
+             
               {/* Recent Homework & Events */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                {/* Recent Homework */}
-                <motion.div
-                  className="p-6 rounded-2xl shadow-sm"
-                  style={{
-                    backgroundColor: "var(--background-color)",
-                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    📚 Recent Homework
-                  </h3>
-                  <div className="space-y-3">
-                    {Array.isArray(homeworkData) && homeworkData.slice(0, 3).map((homework, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{homework.title}</p>
-                          <p className="text-sm text-gray-600">{homework.assignedBy?.name || "Unknown Teacher"}</p>
-                          <p className="text-xs text-gray-500">{homework.assignedTo?.length || 0} students assigned</p>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-xs px-2 py-1 rounded block mb-1 ${
-                            new Date(homework.dueDate) > new Date() 
-                              ? "bg-green-200 text-green-800" 
-                              : "bg-red-200 text-red-800"
-                          }`}>
-                            {new Date(homework.dueDate) > new Date() ? "Active" : "Expired"}
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            Due: {new Date(homework.dueDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    )) || <p className="text-gray-500">No homework found</p>}
-                  </div>
-                </motion.div>
-
-                {/* Recent Events */}
-                <motion.div
-                  className="p-6 rounded-2xl shadow-sm"
-                  style={{
-                    backgroundColor: "var(--background-color)",
-                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    📅 Upcoming Events
-                  </h3>
-                  <div className="space-y-3">
-                    {Array.isArray(eventsData) && eventsData.slice(0, 3).map((event, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{event.title}</p>
-                          <p className="text-sm text-gray-600">{event.location}</p>
-                        </div>
-                        <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded">
-                          {new Date(event.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )) || <p className="text-gray-500">No events found</p>}
-                  </div>
-                </motion.div>
-
-                {/* Recent Notices */}
-                <motion.div
-                  className="p-6 rounded-2xl shadow-sm"
-                  style={{
-                    backgroundColor: "var(--background-color)",
-                    boxShadow: `-6px 4px 12px rgba(0, 0, 0, 0.25)`,
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 }}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-4">
-                    📢 Recent Notices
-                  </h3>
-                  <div className="space-y-3">
-                    {Array.isArray(noticesData) && noticesData.slice(0, 3).map((notice, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-800">{notice.title}</p>
-                          <p className="text-sm text-gray-600">{notice.audience}</p>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          notice.isImportant 
-                            ? "bg-red-200 text-red-800" 
-                            : "bg-orange-200 text-orange-800"
-                        }`}>
-                          {notice.isImportant ? "Important" : "Normal"}
-                        </span>
-                      </div>
-                    )) || <p className="text-gray-500">No notices found</p>}
-                  </div>
-                </motion.div>
-              </div>
+             
             </>
           ) : active === "Manage Student" ? (
             <ManageStudents />

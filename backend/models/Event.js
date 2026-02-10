@@ -2,13 +2,13 @@
 import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema({
-    title: { type: String, required: true },          // Event ka naam
-    date: { type: Date, required: true },            // Event ki date
-    description: { type: String },                   // Event ka description
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" }, // Admin ya Teacher jo event create kare
-    audience: { type: String, enum: ["All", "Students", "Teachers"], default: "All" }, // Kis ke liye event hai
-    isHoliday: { type: Boolean, default: false },   // Agar school holiday hai to true
-    location: { type: String },                      // Event ka location
+    title: { type: String, required: true },
+    date: { type: Date, required: true },
+    description: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admins", required: true },
+    audience: { type: String, enum: ["All", "Students", "Teachers"], default: "All" },
+    isHoliday: { type: Boolean, default: false },
+    location: { type: String },
 }, { timestamps: true });
 
-export default mongoose.model("Event", eventSchema);
+export default mongoose.model("event", eventSchema, "events");

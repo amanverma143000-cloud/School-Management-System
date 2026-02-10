@@ -2,7 +2,8 @@ import Holiday from "../models/Holiday.js";
 
 export const getAllHolidays = async (req, res) => {
   try {
-    const holidays = await Holiday.find({}).sort({ date: 1 });
+    const adminId = req.user.id;
+    const holidays = await Holiday.find({ createdBy: adminId }).sort({ date: 1 });
     res.status(200).json(holidays);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -11,7 +12,9 @@ export const getAllHolidays = async (req, res) => {
 
 export const createHoliday = async (req, res) => {
   try {
-    const holiday = await Holiday.create(req.body);
+    const adminId = req.user.id;
+    const holidayData = { ...req.body, createdBy: adminId };
+    const holiday = await Holiday.create(holidayData);
     res.status(201).json({ success: true, holiday });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

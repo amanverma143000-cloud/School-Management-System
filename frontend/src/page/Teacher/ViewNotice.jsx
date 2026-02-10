@@ -1,142 +1,167 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
-import { ArrowLeft, Bell } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Megaphone, CalendarDays, X } from "lucide-react";
+import { noticeAPI } from "../../services/api";
 
 const ViewNotice = () => {
-  // 🟢 Dummy data for testing
-  const dummyNotices = [
-    {
-      _id: "1",
-      title: "School Annual Function",
-      description: "School annual function will be held on 25th October. All students must attend.",
-      image: "https://via.placeholder.com/400x200.png?text=Annual+Function",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      _id: "2",
-      title: "Holiday Announcement",
-      description: "School will remain closed on 2nd November due to public holiday.",
-      image: "https://via.placeholder.com/400x200.png?text=Holiday",
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // yesterday
-    },
-    {
-      _id: "3",
-      title: "New Library Books",
-      description: "New books have arrived in the library. Students are encouraged to check them out.",
-      image: "",
-      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
-    },
-  ];
+  const [announcements, setAnnouncements] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [notices] = useState(dummyNotices); // use dummy data
-  const [selectedNotice, setSelectedNotice] = useState(null);
-  const [loading] = useState(false); // no need to wait for API
+  useEffect(() => {
+    fetchNotices();
+  }, []);
 
-  const handleNoticeClick = (notice) => {
-    setSelectedNotice(notice);
+  const fetchNotices = async () => {
+    try {
+      setIsLoading(true);
+      const response = await noticeAPI.getAllNotices();
+      console.log('Notice API Response:', response);
+      const noticesData = response.notices || response.data || response || [];
+      console.log('Notices with images:', noticesData.map(n => ({ title: n.title, image: n.image })));
+      setAnnouncements(Array.isArray(noticesData) ? noticesData : []);
+    } catch (error) {
+      console.error('Error fetching notices:', error);
+      setAnnouncements([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleBack = () => {
-    setSelectedNotice(null);
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen text-gray-600 text-lg">
-        Loading notices...
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading notices...</div>
       </div>
-    );
-  }
-
-  if (selectedNotice) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-50 to-blue-100 py-10 px-6"
-      >
-        <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-3xl border border-gray-200">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-blue-700 flex items-center gap-2">
-              <Bell className="w-6 h-6 text-blue-600" /> Notice Details
-            </h1>
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition"
-            >
-              <ArrowLeft size={18} /> Back
-            </button>
-          </div>
-
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">
-            {selectedNotice.title}
-          </h2>
-          <p className="text-gray-700 leading-relaxed mb-4">
-            {selectedNotice.description}
-          </p>
-          {selectedNotice.image && (
-            <img
-              src={selectedNotice.image}
-              alt="Notice"
-              className="rounded-xl w-full max-h-80 object-contain border"
-            />
-          )}
-          <div className="text-sm text-gray-500 mt-3">
-            Posted on: {new Date(selectedNotice.createdAt).toLocaleDateString()}
-          </div>
-        </div>
-      </motion.div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-10 px-6"
+    <div 
+      className="min-h-screen p-6"
+      style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}
     >
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Bell className="text-blue-600 w-7 h-7" />
-          <h1 className="text-2xl font-bold text-blue-700">School Notices</h1>
-        </div>
+      {/* Header */}
+      <motion.div
+        className="flex items-center justify-center gap-3 mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Megaphone className="text-yellow-600 w-9 h-9" />
+        <h1 className="text-3xl md:text-4xl font-extrabold text-[var(--text-secondary)] drop-shadow-md">
+          📢 Announcements
+        </h1>
+      </motion.div>
 
-        {notices.length > 0 && (
-          <div
-            onClick={() => handleNoticeClick(notices[0])}
-            className="cursor-pointer bg-blue-50 border border-blue-200 p-6 rounded-xl shadow-sm mb-8 hover:bg-blue-100 transition"
+      {/* Cards */}
+      <div className="max-w-6xl mx-auto grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {announcements.length > 0 ? announcements.map((notice, i) => (
+          <motion.div
+            key={notice._id || notice.id}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            whileHover={{ scale: 1.03 }}
+            style={{
+              backgroundColor: "var(--card-bg)",
+              boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+            }}
+            className="rounded-2xl border border-yellow-200 overflow-hidden cursor-pointer hover:shadow-[-8px_6px_16px_rgba(0,0,0,0.35)] transition-all"
+            onClick={() => setSelected(notice)}
           >
-            <h2 className="text-lg font-semibold text-blue-800 mb-2">
-              📢 Latest Notice:
-            </h2>
-            <p className="text-gray-700 font-medium">{notices[0].title}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {new Date(notices[0].createdAt).toLocaleDateString()}
-            </p>
+            <div className="relative">
+              <img
+                src={notice.image || "https://images.unsplash.com/photo-1559027615-5bdf7f3e3c55?auto=format&fit=crop&w=900&q=80"}
+                alt={notice.title}
+                className="w-full h-48 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+              <div className="absolute bottom-3 left-3 text-white text-sm flex items-center gap-2 font-medium">
+                <CalendarDays size={14} />
+                {new Date(notice.createdAt || notice.date).toLocaleDateString()}
+              </div>
+            </div>
+
+            <div className="p-5">
+              <h2 className="text-lg font-bold text-gray-900">
+                {notice.title}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1 font-medium">By {notice.author || notice.createdBy?.name || "Admin"}</p>
+              <p className="text-gray-700 mt-3 line-clamp-3">
+                {notice.description}
+              </p>
+              {notice.isImportant && (
+                <span className="inline-block mt-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                  Important
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )) : (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 text-lg">No notices available</p>
           </div>
         )}
-
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">
-          Previous Notices:
-        </h3>
-        <ul className="space-y-3">
-          {notices.slice(1).map((notice) => (
-            <li
-              key={notice._id}
-              onClick={() => handleNoticeClick(notice)}
-              className="p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition flex justify-between items-center"
-            >
-              <span className="font-medium text-gray-700">{notice.title}</span>
-              <span className="text-sm text-gray-500">
-                {new Date(notice.createdAt).toLocaleDateString()}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
-    </motion.div>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              style={{
+                backgroundColor: "var(--card-bg)",
+                boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+              }}
+              className="rounded-2xl max-w-2xl w-full overflow-hidden border border-yellow-200"
+              initial={{ scale: 0.95, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 30 }}
+            >
+              <div className="relative">
+                <img
+                  src={selected.image || "https://images.unsplash.com/photo-1559027615-5bdf7f3e3c55?auto=format&fit=crop&w=900&q=80"}
+                  alt={selected.title}
+                  className="w-full h-56 object-cover"
+                />
+                <button
+                  onClick={() => setSelected(null)}
+                  style={{ backgroundColor: "var(--primary-color)" }}
+                  className="absolute top-3 right-3 hover:bg-yellow-500 text-gray-800 p-2 rounded-full shadow"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {selected.title}
+                </h2>
+                <p className="text-sm text-gray-500 mb-3 font-medium">
+                  {selected.author || selected.createdBy?.name || "Admin"} • {new Date(selected.createdAt || selected.date).toLocaleDateString()}
+                </p>
+                <p className="text-gray-700 leading-relaxed">{selected.description}</p>
+                {selected.isImportant && (
+                  <div className="mt-4">
+                    <span className="bg-red-100 text-red-800 text-sm px-3 py-1 rounded-full">
+                      ⚠️ Important Notice
+                    </span>
+                  </div>
+                )}
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Audience:</strong> {selected.audience || "All"}</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

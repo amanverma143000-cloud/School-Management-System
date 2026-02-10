@@ -1,23 +1,25 @@
 import express from "express";
-import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
+import { protect } from "../middlewares/authMiddleware.js";
 import {
   createHomework,
   getAllHomework,
+  getHomeworkById,
   updateHomework,
-  deleteHomework
+  deleteHomework,
+  getTeacherSubjects,
+  getAvailableClasses
 } from "../controllers/homeworkController.js";
 
 const router = express.Router();
 
-// 🔐 Teacher protected routes
-router.use(protect);
-router.use(authorizeRoles("Teacher"));
+router.use(protect); // Saare routes protected hain
 
-// Homework Routes
-router.post("/homework/add", createHomework);
-router.get("/homework/all", getAllHomework);
-
-router.put("/homework/update/:id", updateHomework);
-router.delete("/homework/delete/:id", deleteHomework);
+router.post("/add", createHomework);
+router.get("/all", getAllHomework);
+router.get("/teacher-subjects", getTeacherSubjects);
+router.get("/available-classes", getAvailableClasses);
+router.get("/:id", getHomeworkById);
+router.put("/:id", updateHomework);
+router.delete("/:id", deleteHomework);
 
 export default router;

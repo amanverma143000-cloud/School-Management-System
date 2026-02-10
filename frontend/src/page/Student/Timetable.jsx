@@ -1,89 +1,60 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarDaysIcon, Clock, BookOpen, Download, Timer } from "lucide-react";
+import { examAPI } from "../../services/api";
 
 const ExamTimetable = () => {
   const [exams, setExams] = useState([]);
   const [filterDate, setFilterDate] = useState("");
-  const [currentExam, setCurrentExam] = useState(null);
-  const [timeLeft, setTimeLeft] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const mockData = [
-      {
-        id: 1,
-        subject: "Mathematics",
-        date: "2025-10-29",
-        time: "10:09 AM - 10:10 AM",
-        room: "Room 201",
-        invigilator: "Mr. Sharma",
-      },
-      {
-        id: 2,
-        subject: "Physics",
-        date: "2025-11-07",
-        time: "10:00 AM - 12:00 PM",
-        room: "Room 305",
-        invigilator: "Dr. Meena",
-      },
-      {
-        id: 3,
-        subject: "Computer Science",
-        date: "2025-11-09",
-        time: "01:00 PM - 03:00 PM",
-        room: "Lab A1",
-        invigilator: "Prof. Verma",
-      },
-    ];
-    setExams(mockData);
+    fetchExams();
   }, []);
 
-  const parseTime = (timeStr) => {
-    const [time, modifier] = timeStr.split(" ");
-    let [hours, minutes] = time.split(":").map(Number);
-    if (modifier === "PM" && hours < 12) hours += 12;
-    if (modifier === "AM" && hours === 12) hours = 0;
-    const now = new Date();
-    now.setHours(hours, minutes, 0, 0);
-    return now;
+  const fetchExams = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching exams...');
+      
+      const response = await examAPI.getAllExams();
+      console.log('Exam API Response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Is array:', Array.isArray(response));
+      
+      // Handle different response formats
+      let examList = [];
+      if (Array.isArray(response)) {
+        examList = response;
+      } else if (response && Array.isArray(response.exams)) {
+        examList = response.exams;
+      } else if (response && Array.isArray(response.data)) {
+        examList = response.data;
+      }
+      
+      console.log('Exam list:', examList);
+      setExams(examList);
+    } catch (error) {
+      console.error('Error fetching exams:', error);
+      setExams([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const todayExam = exams.find(
-        (exam) => exam.date === now.toISOString().split("T")[0]
-      );
 
-      if (!todayExam) {
-        setCurrentExam(null);
-        setTimeLeft("");
-        return;
-      }
-
-      const startTime = parseTime(todayExam.time.split(" - ")[0]);
-      const endTime = parseTime(todayExam.time.split(" - ")[1]);
-      const diff = startTime - now;
-
-      if (diff > 0 && diff <= 60 * 60 * 1000) {
-        const mins = Math.floor((diff / 1000 / 60) % 60);
-        const secs = Math.floor((diff / 1000) % 60);
-        setCurrentExam(todayExam);
-        setTimeLeft(`${mins}m ${secs}s`);
-      } else if (now >= startTime && now <= endTime) {
-        setTimeLeft("🕒 Exam Started!");
-      } else {
-        setTimeout(() => setCurrentExam(null), 1000);
-        setTimeLeft("");
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [exams]);
 
   const filteredExams = filterDate
-    ? exams.filter((exam) => exam.date === filterDate)
+    ? exams.filter((exam) => exam.examDate && exam.examDate.split('T')[0] === filterDate)
     : exams;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading exams...</div>
+      </div>
+    );
+  }
 
   const handleDownload = () => {
     alert("✅ Timetable downloaded successfully!");
@@ -129,37 +100,7 @@ const ExamTimetable = () => {
       </motion.div>
 
       {/* Live Countdown */}
-      <AnimatePresence>
-        {currentExam && (
-          <motion.div
-            key={currentExam.id}
-            className={`w-full max-w-6xl mb-6 p-5 rounded-xl text-center shadow-lg text-white
-           ${
-             timeLeft === "🕒 Exam Started!"
-               ? "bg-gradient-to-r from-orange-500 to-yellow-600"
-               : "bg-gradient-to-r from-green-500 to-lime-500"
-           }`}
-            initial={{ opacity: 0, scale: 0.8, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.7, y: -20 }}
-          >
-            <motion.div
-              className="flex justify-center items-center gap-2 text-lg font-semibold"
-              animate={{ scale: [1, 1.08, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <Timer className="animate-pulse w-5 h-5" />
-              {timeLeft === "🕒 Exam Started!" ? (
-                <span>🚀 Exam <b>{currentExam.subject}</b> has started!</span>
-              ) : (
-                <span>
-                  Exam <b>{currentExam.subject}</b> starts in <b>{timeLeft}</b>
-                </span>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Removed countdown feature */}
 
       {/* Table */}
       <div className="w-full max-w-6xl overflow-x-auto shadow-xl rounded-2xl bg-white/80 backdrop-blur-lg border border-yellow-200">
@@ -167,31 +108,39 @@ const ExamTimetable = () => {
           <thead>
             <tr className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-sm md:text-base">
               <th className="py-3 px-4 text-left">Subject</th>
-              <th className="py-3 px-4 text-left">Time</th>
-              <th className="py-3 px-4 text-left">Room</th>
-              <th className="py-3 px-4 text-left">Invigilator</th>
+              <th className="py-3 px-4 text-left">Date</th>
+              <th className="py-3 px-4 text-left">Day</th>
+              <th className="py-3 px-4 text-left">Total Marks</th>
             </tr>
           </thead>
           <tbody>
-            {filteredExams.map((exam, index) => (
-              <motion.tr
-                key={exam.id}
-                className={`${index % 2 === 0 ? "bg-white" : "bg-yellow-50"} border-b hover:bg-yellow-100 transition-all`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <td className="py-3 px-4 flex items-center gap-2 font-semibold">
-                  <BookOpen className="text-yellow-600 w-4 h-4" />
-                  {exam.subject}
+            {filteredExams.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="py-8 text-center text-gray-500">
+                  No exams scheduled yet.
                 </td>
-                <td className="py-3 px-4 flex items-center gap-2">
-                  <Clock className="text-gray-600 w-4 h-4" /> {exam.time}
-                </td>
-                <td className="py-3 px-4">{exam.room}</td>
-                <td className="py-3 px-4 text-gray-700">{exam.invigilator}</td>
-              </motion.tr>
-            ))}
+              </tr>
+            ) : (
+              filteredExams.map((exam, index) => (
+                <motion.tr
+                  key={exam._id}
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-yellow-50"} border-b hover:bg-yellow-100 transition-all`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <td className="py-3 px-4 flex items-center gap-2 font-semibold">
+                    <BookOpen className="text-yellow-600 w-4 h-4" />
+                    {exam.subjectName}
+                  </td>
+                  <td className="py-3 px-4">
+                    {exam.examDate ? new Date(exam.examDate).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td className="py-3 px-4">{exam.examDay}</td>
+                  <td className="py-3 px-4 text-gray-700">{exam.totalMarks}</td>
+                </motion.tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

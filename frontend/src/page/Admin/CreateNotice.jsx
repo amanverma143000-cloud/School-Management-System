@@ -1,24 +1,55 @@
 import React, { useState } from "react";
-import { useAddNoticeMutation } from "../../../Api/SchoolApi";
-import { FaBullhorn } from "react-icons/fa";
+import { noticeAPI } from "../../services/api";
+import { FaBullhorn, FaImage } from "react-icons/fa";
+import { useAuth } from "../../context/AuthProvider";
 
 const CreateNotice = () => {
-  const [addNotice, { isLoading }] = useAddNoticeMutation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     audience: "All",
-    isImportant: false
+    isImportant: false,
+    image: ""
   });
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'school_notices');
+
+    try {
+      setUploading(true);
+      const response = await fetch('https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, image: data.secure_url }));
+    } catch (error) {
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
-      await addNotice(formData);
+      const userId = user?._id || localStorage.getItem("userId");
+      await noticeAPI.createNotice({ ...formData, createdBy: userId });
       alert("Notice created successfully!");
-      setFormData({ title: "", description: "", audience: "All", isImportant: false });
+      setFormData({ title: "", description: "", audience: "All", isImportant: false, image: "" });
     } catch (error) {
       alert("Failed to create notice");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,6 +95,24 @@ const CreateNotice = () => {
               <option value="Teachers">Teachers</option>
               <option value="Parents">Parents</option>
             </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <FaImage /> Notice Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-yellow-500"
+            />
+            {uploading && <p className="text-sm text-blue-600 mt-2">Uploading image...</p>}
+            {formData.image && (
+              <div className="mt-3">
+                <img src={formData.image} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2">

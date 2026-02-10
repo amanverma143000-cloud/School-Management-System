@@ -4,21 +4,31 @@ import {
   getAllTeachers,
   getTeacherById,
   updateTeacher,
-  deleteTeacher
+  deleteTeacher,
+  getTeacherStudents,
+  getTeacherSubjects,
+  getTeacherClasses,
+  getTeacherSections,
+  getTeacherExams
 } from "../controllers/teacherController.js";
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// All teacher management routes protected and admin-only
-// router.use(protect);
-// router.use(authorizeRoles("Admin"));
+// ========== Teacher Self-Service Routes ==========
+// These routes are for teachers to access their own data
+router.get("/my-students", protect, authorizeRoles("Teacher"), getTeacherStudents);
+router.get("/my-subjects", protect, authorizeRoles("Teacher"), getTeacherSubjects);
+router.get("/my-classes", protect, authorizeRoles("Teacher"), getTeacherClasses);
+router.get("/my-sections", protect, authorizeRoles("Teacher"), getTeacherSections);
+router.get("/my-exams", protect, authorizeRoles("Teacher"), getTeacherExams);
 
-// Meaningful URLs
-router.post("/teacher/add", createTeacher);
-router.get("/teacher/all", getAllTeachers);
-router.get("/teacher/:id", getTeacherById);
-router.put("/teacher/update/:id", updateTeacher);
-router.delete("/teacher/delete/:id", deleteTeacher);
+// ========== Admin Teacher Management Routes ==========
+// These routes are for admins to manage teachers
+router.post("/add", protect, authorizeRoles("Admin"), createTeacher);
+router.get("/all", protect, authorizeRoles("Admin"), getAllTeachers);
+router.get("/:id", protect, authorizeRoles("Admin"), getTeacherById);
+router.put("/update/:id", protect, authorizeRoles("Admin"), updateTeacher);
+router.delete("/delete/:id", protect, authorizeRoles("Admin"), deleteTeacher);
 
 export default router;

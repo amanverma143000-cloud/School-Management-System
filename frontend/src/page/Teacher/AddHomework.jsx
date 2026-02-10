@@ -1,95 +1,136 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion";// eslint-disable-line
-import { Upload, FileText, Image as ImageIcon, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { FileText, Image as ImageIcon } from "lucide-react";
+import { homeworkAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 const AddHomework = () => {
-  // 🧠 States: Form ke input values handle karne ke liye
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [dueDate, setDueDate] = useState("");
+  const [subject, setSubject] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // 🧩 Image select karne par preview generate karna
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
+  useEffect(() => {
+    fetchDropdownData();
+  }, []);
+
+  const fetchDropdownData = async () => {
+    try {
+      const [subjectsRes, classesRes] = await Promise.all([
+        homeworkAPI.getTeacherSubjects(),
+        homeworkAPI.getAvailableClasses()
+      ]);
+      console.log('Subjects API Response:', subjectsRes);
+      console.log('Classes API Response:', classesRes);
+      
+      // Handle subjects - could be array directly or object with subjects property
+      const subjectsData = Array.isArray(subjectsRes) ? subjectsRes : subjectsRes?.subjects || [];
+      setSubjects(subjectsData);
+      
+      // Handle classes - the API returns array of class objects with name, section, grade, label
+      const classesData = Array.isArray(classesRes) ? classesRes : classesRes?.data || classesRes?.classes || [];
+      setClasses(classesData);
+    } catch (err) {
+      console.error('Error fetching dropdown data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ❌ Agar user galat image select kare, to use remove karne ka function
-  const handleRemoveImage = () => {
-    setImage(null);
-    setPreview(null);
-  };
-
-  // 🚀 Homework submit karne ka main function
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 🛑 Validation: Title aur Description empty na ho
-    if (!title || !description) {
-      alert("Please fill all fields before posting homework!");
+    if (!title || !dueDate || !subject || !selectedClass || !selectedSection) {
+      alert("Please fill all required fields: Title, Due Date, Subject, Class, and Section!");
       return;
     }
 
-    // 🧱 FormData object banate hain (kyunki image file bhi bhejni hai)
-    const formData = new FormData();
-    formData.append("title", title); // 📘 Homework Title
-    formData.append("description", description); // 📝 Homework Description
-    if (image) formData.append("image", image); // 🖼️ Optional Image
-
     try {
-      // 🌐 Backend API ko call karna (Express + MongoDB)
-      const res = await fetch("http://localhost:5000/api/homework", {
-        method: "POST",
-        body: formData, // ✅ form-data format me bhejna (kyunki file hai)
-      });
+      console.log('Current user:', user);
+      const userId = user?._id || user?.id;
+      console.log('User ID:', userId);
+      
+      if (!userId) {
+        alert('User not logged in properly. Please login again.');
+        return;
+      }
 
-      const data = await res.json();
-      alert(data.message || "Homework posted successfully!");
+      const homeworkData = {
+        title,
+        description,
+        assignedBy: userId,
+        dueDate,
+        subject,
+        class: selectedClass,
+        section: selectedSection
+      };
 
-      // 🔄 Fields reset kar dena
+      console.log('Sending homework data:', homeworkData);
+      const response = await homeworkAPI.createHomework(homeworkData);
+      console.log('Homework created response:', response);
+      alert("Homework posted successfully!");
+
+      // Reset form
       setTitle("");
       setDescription("");
-      setImage(null);
-      setPreview(null);
+      setDueDate("");
+      setSubject("");
+      setSelectedClass("");
+      setSelectedSection("");
     } catch (err) {
-      console.error(err);
-      alert("Error while posting homework.");
+      console.error('Full error:', err);
+      alert("Error while posting homework: " + (err.message || err.error || "Unknown error"));
     }
   };
 
+  // Extract unique classes and sections from the classes array
+  const uniqueClasses = [...new Set(classes.map(c => c.name || c.grade))].filter(Boolean).sort();
+  
+  const getSectionsForClass = (className) => {
+    return classes
+      .filter(c => (c.name || c.grade) === className)
+      .map(c => c.section)
+      .filter(Boolean);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-10 px-4">
+    <div className="min-h-screen flex items-center justify-center py-10 px-4" 
+         style={{ background: "linear-gradient(to bottom right, #fffdf3, #fffbea, #fff6d9)" }}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-lg border border-gray-100"
+        style={{
+          backgroundColor: "var(--card-bg)",
+          boxShadow: "-6px 4px 12px rgba(0, 0, 0, 0.25)",
+        }}
+        className="rounded-2xl p-8 w-full max-w-lg border border-yellow-200"
       >
         <div className="flex items-center justify-center gap-2 mb-6">
-          <FileText className="text-blue-600 w-7 h-7" />
-          <h1 className="text-2xl font-bold text-blue-700">Add Homework</h1>
+          <FileText className="text-yellow-600 w-7 h-7" />
+          <h1 className="text-2xl font-bold text-[var(--text-secondary)]">📚 Add Homework</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 🏷️ Homework Title */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Homework Title
+              Homework Title *
             </label>
             <input
               type="text"
               placeholder="e.g. Science - Chapter 6: Motion"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none transition"
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
             />
           </div>
 
-          {/* 📝 Description */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Description
@@ -98,56 +139,89 @@ const AddHomework = () => {
               placeholder="Write homework details here..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 h-28 resize-none focus:ring-2 focus:ring-blue-400 outline-none transition"
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 h-28 resize-none focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
             />
           </div>
 
-          {/* 🖼️ Image Upload Section */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Upload Image (optional)
+              Subject *
             </label>
+            <select
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+              disabled={loading}
+            >
+              <option value="">Select Subject</option>
+              {subjects.map((sub, idx) => (
+                <option key={idx} value={sub}>{sub}</option>
+              ))}
+            </select>
+          </div>
 
-            {!preview ? (
-              // 📤 Image upload box (agar image select nahi hui)
-              <div className="border-2 border-dashed border-blue-300 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-blue-50 transition">
-                <Upload className="w-6 h-6 text-blue-500 mb-2" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="cursor-pointer text-sm text-gray-500"
-                />
-              </div>
-            ) : (
-              // ✅ Image preview with remove option
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-3 flex flex-col items-center"
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Class *
+              </label>
+              <select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedSection("");
+                }}
+                className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+                disabled={loading}
               >
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-44 h-44 object-cover rounded-xl border border-gray-200 shadow-md"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="mt-3 flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-semibold transition"
+                <option value="">Select Class</option>
+                {uniqueClasses.map((cls, idx) => (
+                  <option key={idx} value={cls}>{cls}</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedClass && (
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Section *
+                </label>
+                <select
+                  value={selectedSection}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+                  disabled={loading}
                 >
-                  <X className="w-4 h-4" /> Remove Image
-                </button>
-              </motion.div>
+                  <option value="">Section</option>
+                  {getSectionsForClass(selectedClass).map((sec, idx) => (
+                    <option key={idx} value={sec}>{sec}</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
 
-          {/* 🚀 Submit Button */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Due Date *
+            </label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full border border-yellow-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition bg-yellow-50"
+            />
+          </div>
+
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md transition"
+            style={{
+              backgroundColor: "var(--primary-color)",
+              color: "var(--text-primary)",
+            }}
+            className="w-full hover:bg-yellow-500 font-semibold py-3 rounded-xl shadow-md transition"
           >
             <div className="flex items-center justify-center gap-2">
               <ImageIcon className="w-5 h-5" />
