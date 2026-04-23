@@ -33,7 +33,7 @@ const app = express();
 
 // CORS setup - frontend se backend ko access karne ki permission de rahe hain
 app.use(cors({
-    origin: "https://school-management-system-six-xi.vercel.app", // React frontend ka URL (port 3001 par chal raha hai)
+    origin: "https://school-management-system-onwedkvke.vercel.app/", // React frontend ka URL (port 3001 par chal raha hai)
     credentials: true, // Cookies aur authentication tokens bhejne ki permission
 }));
 
