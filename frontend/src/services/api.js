@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Base API URL - Backend server ka address
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://school-management-system-w0zr.onrender.com/api';
 
 // Axios instance create kar rahe hain with default configuration
 const api = axios.create({
