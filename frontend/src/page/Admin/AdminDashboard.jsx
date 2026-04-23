@@ -11,7 +11,7 @@ import {
   eventAPI,
   homeworkAPI,
   noticeAPI,
-  adminAPI
+  
 } from "../../services/api";
 // Icons import kar rahe hain
 import {
