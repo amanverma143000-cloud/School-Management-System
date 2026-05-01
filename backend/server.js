@@ -41,7 +41,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 }));
-app.options("*", cors()); // Preflight requests handle karo
+app.options("/{*path}", cors()); // Preflight requests handle karo
 
 // JSON data ko parse karne ke liye middleware - API requests mein JSON data aata hai
 app.use(express.json());
@@ -103,6 +103,54 @@ app.use("/api/attendance/teacher", attendTeaRoutes);  // Teacher attendance rout
 app.use("/api/student/results", resultRoute);         // Student results routes
 app.use("/api/teacher/results", resultRoute);          // Teacher results routes
 app.use("/api/admin/results", resultRoute);           // Admin results routes
+
+// Seed route - Render pe data add karne ke liye
+app.get("/api/seed", async (req, res) => {
+    try {
+        const bcrypt = await import("bcryptjs");
+        const Admin = (await import("./models/Admin.js")).default;
+        const Teacher = (await import("./models/Teacher.js")).default;
+        const Student = (await import("./models/Student.js")).default;
+
+        await Admin.deleteMany({});
+        await Teacher.deleteMany({});
+        await Student.deleteMany({});
+
+        const admin = await Admin.create({
+            name: "Rupesh Yadav",
+            email: "admin@example.com",
+            password: "Admin@123",
+            domain: "shopmanagementsystem.com"
+        });
+
+        const teacher = await Teacher.create({
+            name: "Amit Sharma",
+            email: "amit.sharma@example.com",
+            password: "Teacher@123",
+            mobile: "9876543210",
+            location: "Indore, Madhya Pradesh",
+            experience: 5,
+            subjects: ["Mathematics", "Physics"],
+            createdBy: admin._id
+        });
+
+        await Student.create({
+            name: "Rohan",
+            lastname: "Verma",
+            email: "rohan.verma@example.com",
+            password: "Student@123",
+            mobile: "9876501234",
+            class: "10",
+            section: "A",
+            rollNumber: "10A23",
+            createdBy: admin._id
+        });
+
+        res.json({ success: true, message: "✅ Seed data added! Admin, Teacher, Student created." });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 // Default route - jab koi home page par jaye to ye message dikhega
 app.get("/", (req, res) => {
