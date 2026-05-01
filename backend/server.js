@@ -31,22 +31,17 @@ dotenv.config();
 // Express app create kar rahe hain
 const app = express();
 
-// CORS setup - frontend se backend ko access karne ki permission de rahe hain
-const allowedOrigins = [
-    "http://localhost:3001",
-    "https://school-management-system-onwedkvke.vercel.app"
-];
-
+// CORS setup
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
+    origin: [
+        "http://localhost:3001",
+        "https://school-management-system-onwedkvke.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 }));
+app.options("*", cors()); // Preflight requests handle karo
 
 // JSON data ko parse karne ke liye middleware - API requests mein JSON data aata hai
 app.use(express.json());

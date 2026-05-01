@@ -113,8 +113,7 @@ export const eventAPI = {
 // ========== NOTICE APIs ==========
 export const noticeAPI = {
   getAllNotices: () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user.role?.toLowerCase() || 'student';
+    const role = (localStorage.getItem('role') || 'student').toLowerCase();
     const basePath = role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student';
     return api.get(`${basePath}/notices/all`);
   },
@@ -127,8 +126,7 @@ export const noticeAPI = {
 // ========== HOMEWORK APIs ==========
 export const homeworkAPI = {
   getAllHomework: () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user.role?.toLowerCase() || 'student';
+    const role = (localStorage.getItem('role') || 'student').toLowerCase();
     let basePath = '/student';
     if (role === 'teacher') basePath = '/teacher';
     else if (role === 'admin') basePath = '/admin';
@@ -157,8 +155,7 @@ export const leaveAPI = {
 export const resultAPI = {
   // Get all results (auto-filters by student role)
   getAllResults: () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user.role?.toLowerCase() || 'student';
+    const role = (localStorage.getItem('role') || 'student').toLowerCase();
     let basePath = '/student';
     if (role === 'teacher') basePath = '/teacher';
     else if (role === 'admin') basePath = '/admin';
@@ -177,8 +174,7 @@ export const resultAPI = {
 // ========== EXAM APIs ==========
 export const examAPI = {
   getAllExams: () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user.role?.toLowerCase() || 'student';
+    const role = (localStorage.getItem('role') || 'student').toLowerCase();
     const basePath = role === 'teacher' ? '/teacher' : '/student';
     return api.get(`${basePath}/exam/all`);
   },
@@ -210,21 +206,7 @@ export const attendanceAPI = {
     // Check for user object in localStorage
     let userId = null;
     
-    // First try to get from 'user' JSON object
-    const userJson = localStorage.getItem('user');
-    if (userJson) {
-      try {
-        const user = JSON.parse(userJson);
-        userId = user._id || user.userId;
-      } catch (e) {
-        console.error('Error parsing user from localStorage:', e);
-      }
-    }
-    
-    // If not found, try individual keys
-    if (!userId) {
-      userId = localStorage.getItem('userId');
-    }
+    userId = localStorage.getItem('userId');
     
     if (userId) {
       return api.get(`/attendance/student/${userId}`);
